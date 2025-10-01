@@ -7,7 +7,11 @@ import {
   randomSaltHex,
   saveShareRecord,
   buildShareId,
-  ShareFileRecord
+  ShareFileRecord,
+  SHARE_FILE_VERSION,
+  SHARE_FILE_PBKDF2_ITERATIONS,
+  SHARE_FILE_PASSWORD_ENCODING,
+  SHARE_FILE_SALT_LENGTH_BYTES
 } from '../../keyset/index.js';
 import {Prompt} from '../ui/Prompt.js';
 
@@ -112,18 +116,30 @@ export function ShareSaver({
 
   const handleSaveInternal = async (password: string) => {
     const salt = randomSaltHex();
-    const secret = deriveSecret(password, salt);
+    const secret = deriveSecret(
+      password,
+      salt,
+      SHARE_FILE_PBKDF2_ITERATIONS,
+      SHARE_FILE_PASSWORD_ENCODING,
+      SHARE_FILE_SALT_LENGTH_BYTES
+    );
     const {cipherText} = encryptPayload(secret, share.credential);
 
     const record: ShareFileRecord = {
       id: buildShareId(keysetName, share.index),
       name: `${keysetName} share ${share.index}`,
-      keysetName,
-      index: share.index,
       share: cipherText,
       salt,
       groupCredential,
-      savedAt: new Date().toISOString()
+      version: SHARE_FILE_VERSION,
+      savedAt: new Date().toISOString(),
+      metadata: {
+        createdBy: 'igloo-cli',
+        pbkdf2Iterations: SHARE_FILE_PBKDF2_ITERATIONS,
+        passwordEncoding: SHARE_FILE_PASSWORD_ENCODING
+      },
+      keysetName,
+      index: share.index
     };
 
     return saveShareRecord(record, {directory: outputDir});
@@ -185,18 +201,30 @@ export function ShareSaver({
             const paths: string[] = [];
             for (const candidate of shares) {
               const salt = randomSaltHex();
-              const secret = deriveSecret(autoPassword, salt);
+              const secret = deriveSecret(
+                autoPassword,
+                salt,
+                SHARE_FILE_PBKDF2_ITERATIONS,
+                SHARE_FILE_PASSWORD_ENCODING,
+                SHARE_FILE_SALT_LENGTH_BYTES
+              );
               const {cipherText} = encryptPayload(secret, candidate.credential);
 
               const record: ShareFileRecord = {
                 id: buildShareId(keysetName, candidate.index),
                 name: `${keysetName} share ${candidate.index}`,
-                keysetName,
-                index: candidate.index,
                 share: cipherText,
                 salt,
                 groupCredential,
-                savedAt: new Date().toISOString()
+                version: SHARE_FILE_VERSION,
+                savedAt: new Date().toISOString(),
+                metadata: {
+                  createdBy: 'igloo-cli',
+                  pbkdf2Iterations: SHARE_FILE_PBKDF2_ITERATIONS,
+                  passwordEncoding: SHARE_FILE_PASSWORD_ENCODING
+                },
+                keysetName,
+                index: candidate.index
               };
 
               const filepath = await saveShareRecord(record, {directory: outputDir});

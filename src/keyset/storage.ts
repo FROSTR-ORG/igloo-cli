@@ -2,6 +2,7 @@ import {promises as fs} from 'node:fs';
 import path from 'node:path';
 import {getShareDirectory} from './paths.js';
 import {ShareFileRecord, ShareMetadata} from './types.js';
+import {SHARE_FILE_VERSION} from './crypto.js';
 
 export async function ensureShareDirectory(dirOverride?: string): Promise<string> {
   const dir = dirOverride ?? getShareDirectory();
@@ -47,7 +48,12 @@ export async function saveShareRecord(
 ): Promise<string> {
   const dir = await ensureShareDirectory(options.directory);
   const filepath = path.join(dir, `${record.id}.json`);
-  await fs.writeFile(filepath, JSON.stringify(record, null, 2), 'utf8');
+  const payload: ShareFileRecord = {
+    ...record,
+    version: record.version ?? SHARE_FILE_VERSION,
+    savedAt: record.savedAt ?? new Date().toISOString()
+  };
+  await fs.writeFile(filepath, JSON.stringify(payload, null, 2), 'utf8');
   return filepath;
 }
 

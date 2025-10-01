@@ -1,12 +1,7 @@
 import React, {useEffect, useMemo, useState} from 'react';
 import {Box, Text} from 'ink';
 import {decodeGroup, decodeShare} from '@frostr/igloo-core';
-import {
-  readShareFiles,
-  deriveSecret,
-  decryptPayload,
-  ShareMetadata
-} from '../../keyset/index.js';
+import {readShareFiles, decryptShareCredential, ShareMetadata} from '../../keyset/index.js';
 import {Prompt} from '../ui/Prompt.js';
 
 type KeysetLoadProps = {
@@ -139,7 +134,7 @@ export function KeysetLoad({args}: KeysetLoadProps) {
     return (
       <Box flexDirection="column">
         <Text color="cyanBright">Decrypt share: {selectedShare.name}</Text>
-        <Text color="gray">Saved at {selectedShare.savedAt}</Text>
+        <Text color="gray">Saved at {selectedShare.savedAt ?? 'unknown time'}</Text>
         <Prompt
           key={`password-${selectedShare.id}`}
           label="Enter password"
@@ -150,9 +145,8 @@ export function KeysetLoad({args}: KeysetLoadProps) {
             }
 
             try {
-              const secret = deriveSecret(value, selectedShare.salt);
-              const plaintext = decryptPayload(secret, selectedShare.share);
-              setResult({share: plaintext, group: selectedShare.groupCredential});
+              const {shareCredential} = decryptShareCredential(selectedShare, value);
+              setResult({share: shareCredential, group: selectedShare.groupCredential});
               setPhase('result');
               return undefined;
             } catch (error: any) {

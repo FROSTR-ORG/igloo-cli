@@ -7,12 +7,7 @@ import {
   checkPeerStatus,
   DEFAULT_PING_RELAYS
 } from '@frostr/igloo-core';
-import {
-  readShareFiles,
-  deriveSecret,
-  decryptPayload,
-  ShareMetadata
-} from '../../keyset/index.js';
+import {readShareFiles, decryptShareCredential, ShareMetadata} from '../../keyset/index.js';
 import {Prompt} from '../ui/Prompt.js';
 
 export type KeysetStatusProps = {
@@ -186,8 +181,7 @@ export function KeysetStatus({flags, args}: KeysetStatusProps) {
     let node: any;
 
     try {
-      const secret = deriveSecret(password, share.salt);
-      const shareCredential = decryptPayload(secret, share.share);
+      const {shareCredential} = decryptShareCredential(share, password);
 
       node = await createAndConnectNode(
         {
@@ -291,7 +285,7 @@ export function KeysetStatus({flags, args}: KeysetStatusProps) {
     return (
       <Box flexDirection="column">
         <Text color="cyanBright">Decrypt share: {selectedShare.name}</Text>
-        <Text color="gray">Saved at {selectedShare.savedAt}</Text>
+        <Text color="gray">Saved at {selectedShare.savedAt ?? 'unknown time'}</Text>
         <Prompt
           key={`password-${selectedShare.id}`}
           label="Enter password"

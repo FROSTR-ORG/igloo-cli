@@ -1,12 +1,14 @@
 export type ShareFileRecord = {
   id: string;
   name: string;
-  keysetName: string;
-  index: number;
   share: string;
   salt: string;
   groupCredential: string;
-  savedAt: string;
+  version?: number;
+  savedAt?: string;
+  metadata?: Record<string, unknown>;
+  keysetName?: string;
+  index?: number;
 };
 
 export type ShareMetadata = ShareFileRecord & {

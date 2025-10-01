@@ -75,7 +75,7 @@ export function KeysetList() {
             <Text>
               {index + 1}. {share.name} ({share.id})
             </Text>
-            <Text color="gray">Saved at: {share.savedAt}</Text>
+            <Text color="gray">Saved at: {share.savedAt ?? 'unknown time'}</Text>
             <Text color="gray">File: {share.filepath}</Text>
           </Box>
         ))}
