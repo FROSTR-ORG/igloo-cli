@@ -3,9 +3,15 @@ import {Box, Text} from 'ink';
 import {Intro} from './components/Intro.js';
 import {Setup} from './components/Setup.js';
 import {About} from './components/About.js';
+import {KeysetCreate} from './components/keyset/KeysetCreate.js';
+import {KeysetList} from './components/keyset/KeysetList.js';
+import {KeysetLoad} from './components/keyset/KeysetLoad.js';
+import {KeysetHelp} from './components/keyset/KeysetHelp.js';
+import {KeysetStatus} from './components/keyset/KeysetStatus.js';
 
 type AppProps = {
   command: string;
+  args: string[];
   flags: Record<string, string | boolean>;
   version: string;
 };
@@ -21,22 +27,26 @@ function parseNumber(value: string | boolean | undefined, fallback: number) {
   return fallback;
 }
 
-function StatusStub() {
-  return (
-    <Box flexDirection="column" paddingX={1}>
-      <Text color="cyanBright">Status probes are on the roadmap.</Text>
-      <Text>
-        The goal is to query Igloo Desktop, Frost2x, and other bifrost nodes to
-        confirm relay reachability plus signer readiness.
-      </Text>
-      <Text>
-        Open an issue if you would like to help shape the diagnostics payloads.
-      </Text>
-    </Box>
-  );
+function renderKeyset(args: string[], flags: Record<string, string | boolean>) {
+  const subcommand = args[0]?.toLowerCase();
+
+  switch (subcommand) {
+    case 'create':
+      return <KeysetCreate flags={flags} />;
+    case 'list':
+      return <KeysetList />;
+    case 'load':
+      return <KeysetLoad args={args.slice(1)} />;
+    case 'status':
+      return <KeysetStatus flags={flags} args={args.slice(1)} />;
+    case undefined:
+      return <KeysetHelp />;
+    default:
+      return <KeysetHelp />;
+  }
 }
 
-export function App({command, flags, version}: AppProps) {
+export function App({command, args, flags, version}: AppProps) {
   const normalized = command.toLowerCase();
   const threshold = parseNumber(flags.threshold, 2);
   const total = parseNumber(flags.total, 3);
@@ -47,7 +57,9 @@ export function App({command, flags, version}: AppProps) {
     case 'about':
       return <About />;
     case 'status':
-      return <StatusStub />;
+      return <KeysetStatus flags={flags} args={args} />;
+    case 'keyset':
+      return renderKeyset(args, flags);
     default:
       return (
         <Intro
@@ -55,7 +67,8 @@ export function App({command, flags, version}: AppProps) {
           commandExamples={[
             'igloo-cli setup --threshold 2 --total 3',
             'igloo-cli about',
-            'igloo-cli status'
+            'igloo-cli keyset status --share my-share --password-file ./pass.txt',
+            'igloo-cli keyset create --password-file ./pass.txt --output ./shares'
           ]}
         />
       );

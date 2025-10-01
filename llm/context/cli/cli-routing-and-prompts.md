@@ -1,0 +1,24 @@
+# CLI Routing & Prompt Handling
+
+## Command matrix
+- Top-level commands (`src/cli.tsx`, `src/App.tsx`):
+  - `intro`, `setup`, `about` — existing informational screens.
+  - `status` — delegates to keyset diagnostics.
+  - `keyset <subcommand>` — create, list, load, status, help.
+- `parseArgv` normalises shorthand flags (`-t`, `-T`) and captures positional args allowing subcommand chains like `keyset status --share vault_share_1`.
+
+## Ink router
+- `App` inspects `command` and dispatches to subcomponents, passing along `args` and `flags`.
+- `renderKeyset` routes to the appropriate keyset sub-flow; defaults to `KeysetHelp` for unknown subcommands.
+
+## Prompt resilience
+- `src/components/ui/Prompt.tsx` blocks interactive input when `useStdin().isRawModeSupported` is false (e.g., CI pipelines).
+- In non-TTY environments, prompts render a red warning advising use of CLI flags instead of crashing with `ERR_USE_STDIN`.
+- Interactive flows continue to support line editing, cancellation via `Esc`, and validation error feedback.
+
+## Automation detection
+- Keyset flows detect whether automation flags were supplied (`--password`, `--password-file`, `--output`) and skip prompts accordingly.
+- Status diagnostics auto-run when both share selection and password are provided.
+
+## Summary
+These routing and prompt updates allow igloo-cli to operate identically in interactive terminals and headless automation, while keeping each command’s UI self-contained within dedicated components.

@@ -8,6 +8,7 @@ type Flags = Record<string, string | boolean>;
 
 type ParsedArgs = {
   command: string;
+  args: string[];
   flags: Flags;
   showHelp: boolean;
   showVersion: boolean;
@@ -78,6 +79,7 @@ function parseArgv(argv: string[]): ParsedArgs {
 
   return {
     command: positionals[0] ?? 'intro',
+    args: positionals.slice(1),
     flags,
     showHelp,
     showVersion
@@ -94,7 +96,7 @@ function showVersion(version: string) {
   process.exit(0);
 }
 
-const {command, flags, showHelp, showVersion: shouldShowVersion} = parseArgv(
+const {command, args, flags, showHelp, showVersion: shouldShowVersion} = parseArgv(
   process.argv.slice(2)
 );
 
@@ -105,5 +107,12 @@ if (shouldShowVersion) {
 if (showHelp) {
   showHelpScreen(packageJson.version);
 } else {
-  render(<App command={command} flags={flags} version={packageJson.version} />);
+  render(
+    <App
+      command={command}
+      args={args}
+      flags={flags}
+      version={packageJson.version}
+    />
+  );
 }
