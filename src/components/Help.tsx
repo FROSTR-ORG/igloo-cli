@@ -17,6 +17,7 @@ export function Help({version}: HelpProps) {
         <Text>- about            Outline the FROSTR stack.</Text>
         <Text>- signer           Decrypt a share and run it as a signer.</Text>
         <Text>- status           Check peer reachability with a saved share.</Text>
+        <Text>- policy           Configure send/receive permissions per peer.</Text>
         <Text>- keyset           Manage keyset creation, saving, loading, status.</Text>
       </Box>
       <Box marginTop={1} flexDirection="column">

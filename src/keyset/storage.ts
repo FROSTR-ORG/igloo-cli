@@ -3,6 +3,7 @@ import path from 'node:path';
 import {getShareDirectory} from './paths.js';
 import {ShareFileRecord, ShareMetadata} from './types.js';
 import {SHARE_FILE_VERSION} from './crypto.js';
+import {ensurePolicy, pruneEmptyPeers} from './policy.js';
 
 export async function ensureShareDirectory(dirOverride?: string): Promise<string> {
   const dir = dirOverride ?? getShareDirectory();
@@ -24,8 +25,10 @@ export async function readShareFiles(): Promise<ShareMetadata[]> {
       try {
         const raw = await fs.readFile(filepath, 'utf8');
         const data = JSON.parse(raw) as ShareFileRecord;
+        const policy = ensurePolicy(data);
         entries.push({
           ...data,
+          policy,
           filepath
         });
       } catch (error) {
@@ -48,10 +51,12 @@ export async function saveShareRecord(
 ): Promise<string> {
   const dir = await ensureShareDirectory(options.directory);
   const filepath = path.join(dir, `${record.id}.json`);
+  const policy = record.policy ? pruneEmptyPeers(ensurePolicy(record)) : undefined;
   const payload: ShareFileRecord = {
     ...record,
     version: record.version ?? SHARE_FILE_VERSION,
-    savedAt: record.savedAt ?? new Date().toISOString()
+    savedAt: record.savedAt ?? new Date().toISOString(),
+    policy
   };
   await fs.writeFile(filepath, JSON.stringify(payload, null, 2), 'utf8');
   return filepath;
@@ -69,6 +74,7 @@ export async function loadShareRecord(identifier: {
       const data = JSON.parse(raw) as ShareFileRecord;
       return {
         ...data,
+        policy: ensurePolicy(data),
         filepath
       } satisfies ShareMetadata;
     } catch (error) {
@@ -88,6 +94,7 @@ export async function loadShareRecord(identifier: {
     const data = JSON.parse(raw) as ShareFileRecord;
     return {
       ...data,
+      policy: ensurePolicy(data),
       filepath: target
     } satisfies ShareMetadata;
   } catch (error) {

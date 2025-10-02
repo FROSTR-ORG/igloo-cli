@@ -11,11 +11,12 @@ Each share is stored as JSON. The following fields are recognised:
 | `id` | string | ✓ | Unique identifier, e.g. `my-keyset_share_1`. |
 | `name` | string | ✓ | Human-readable label such as `My Keyset share 1`. |
 | `share` | string | ✓ | Base64url-encoded AES-GCM ciphertext of the `bfshare…` payload. |
-| `salt` | string | ✓ | 16-byte random salt encoded as lowercase hex (legacy tooling padded this to 32 bytes when deriving keys). |
+| `salt` | string | ✓ | 16-byte random salt encoded as lowercase hex. |
 | `groupCredential` | string | ✓ | Correlated `bfgroup…` credential. |
 | `version` | number | ✓ | File format version. `1` corresponds to the parameters below. |
 | `savedAt` | string | — | ISO-8601 timestamp of persistence. |
-| `metadata` | object | — | Optional contextual details (binder serial, password encoding, etc.). |
+| `metadata` | object | — | Optional contextual details (binder serial, etc.). |
+| `policy` | object | — | Directional policy defaults and overrides for peers. See below. |
 
 > Producers **MUST** include `"version": 1` when writing new share files. Consumers **MUST** treat files without a `version` field as legacy (pre-v1) and fall back to the legacy behaviour (PBKDF2 with 32 iterations).
 
@@ -34,9 +35,31 @@ Additional properties MAY be present for forward compatibility.
   "savedAt": "2025-10-01T12:34:56.000Z",
   "metadata": {
     "binder_sn": "abc123"
+  },
+  "policy": {
+    "defaults": {
+      "allowSend": true,
+      "allowReceive": true
+    },
+    "peers": {
+      "88a71d3e9f3ac066793a717fe1d329e77107de3bfae3d878014949daf07895c7": {
+        "allowSend": true,
+        "allowReceive": false,
+        "updatedAt": "2025-10-02T08:15:30.000Z"
+      }
+    },
+    "updatedAt": "2025-10-02T08:15:30.000Z"
   }
 }
 ```
+
+### Policy Field
+
+- `defaults` records the baseline behaviour (inbound/outbound) and MUST default to allowing both directions.
+- `peers` is an optional map keyed by normalized (lowercase) pubkeys; entries only appear when the signer overrides the defaults for that peer.
+- `updatedAt` is an ISO-8601 timestamp refreshed whenever the signer persists policy updates.
+
+> Consumers MUST treat missing `policy` objects (or files with `version < 1`) as "allow both directions" for every peer and SHOULD only create the `policy` field when a share is upgraded to version 1 or later.
 
 ## Key Derivation
 
@@ -46,11 +69,8 @@ Additional properties MAY be present for forward compatibility.
 - Salt: 16 random bytes stored in `salt`
 
 ```
-passBytes = SHA256(UTF8(password))
-key = PBKDF2-SHA256(passBytes, saltBytes, iterations = 600000, dkLen = 32)
+key = PBKDF2-SHA256(passwordBytes, saltBytes, iterations = 600000, dkLen = 32)
 ```
-
-Older producers that omitted the prehash step or used fewer iterations remain supported; consumers should try both the prehashed and raw-password inputs when decrypting legacy files.
 
 ## Encryption
 

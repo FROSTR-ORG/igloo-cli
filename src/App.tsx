@@ -8,6 +8,7 @@ import {KeysetLoad} from './components/keyset/KeysetLoad.js';
 import {KeysetHelp} from './components/keyset/KeysetHelp.js';
 import {KeysetStatus} from './components/keyset/KeysetStatus.js';
 import {KeysetSigner} from './components/keyset/KeysetSigner.js';
+import {KeysetPolicy} from './components/keyset/KeysetPolicy.js';
 
 type AppProps = {
   command: string;
@@ -41,6 +42,8 @@ function renderKeyset(args: string[], flags: Record<string, string | boolean>) {
       return <KeysetStatus flags={flags} args={args.slice(1)} />;
     case 'signer':
       return <KeysetSigner flags={flags} args={args.slice(1)} />;
+    case 'policy':
+      return <KeysetPolicy flags={flags} args={args.slice(1)} />;
     case undefined:
       return <KeysetHelp />;
     default:
@@ -62,6 +65,8 @@ export function App({command, args, flags, version}: AppProps) {
       return <KeysetStatus flags={flags} args={args} />;
     case 'signer':
       return <KeysetSigner flags={flags} args={args} />;
+    case 'policy':
+      return <KeysetPolicy flags={flags} args={args} />;
     case 'keyset':
       return renderKeyset(args, flags);
     default:

@@ -11,7 +11,8 @@ import {
   SHARE_FILE_VERSION,
   SHARE_FILE_PBKDF2_ITERATIONS,
   SHARE_FILE_PASSWORD_ENCODING,
-  SHARE_FILE_SALT_LENGTH_BYTES
+  SHARE_FILE_SALT_LENGTH_BYTES,
+  createDefaultPolicy
 } from '../../keyset/index.js';
 import {Prompt} from '../ui/Prompt.js';
 
@@ -139,7 +140,8 @@ export function ShareSaver({
         passwordEncoding: SHARE_FILE_PASSWORD_ENCODING
       },
       keysetName,
-      index: share.index
+      index: share.index,
+      policy: createDefaultPolicy()
     };
 
     return saveShareRecord(record, {directory: outputDir});
@@ -224,7 +226,8 @@ export function ShareSaver({
                   passwordEncoding: SHARE_FILE_PASSWORD_ENCODING
                 },
                 keysetName,
-                index: candidate.index
+                index: candidate.index,
+                policy: createDefaultPolicy()
               };
 
               const filepath = await saveShareRecord(record, {directory: outputDir});

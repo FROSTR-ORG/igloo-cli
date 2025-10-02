@@ -1,3 +1,18 @@
+export type SharePolicyDefaults = {
+  allowSend: boolean;
+  allowReceive: boolean;
+};
+
+export type SharePeerPolicy = SharePolicyDefaults & {
+  updatedAt?: string;
+};
+
+export type SharePolicy = {
+  defaults: SharePolicyDefaults;
+  peers?: Record<string, SharePeerPolicy>;
+  updatedAt?: string;
+};
+
 export type ShareFileRecord = {
   id: string;
   name: string;
@@ -9,6 +24,7 @@ export type ShareFileRecord = {
   metadata?: Record<string, unknown>;
   keysetName?: string;
   index?: number;
+  policy?: SharePolicy;
 };
 
 export type ShareMetadata = ShareFileRecord & {

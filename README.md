@@ -9,7 +9,7 @@ Command-line companion for the FROSTR signing stack, built with React, Ink, and 
 - [x] Peer diagnostics via transient Bifrost nodes (`keyset status`).
 - [x] Long-lived signer lifecycle with peer monitoring and logging (`igloo signer`).
 - [ ] Echo transfer utilities (await/send/start echo listeners).
-- [ ] Policy management commands (set/update peer policies from CLI).
+- [x] Policy management commands (set/update peer policies from CLI).
 - [ ] Advanced diagnostics (ping monitors, multi-round diagnostics).
 - [ ] Key conversion helpers (npub/nsec/hex transforms).
 
@@ -71,6 +71,7 @@ Commands below assume you linked the binary and can run `igloo`. Swap in `igloo-
 | `igloo keyset load` | Decrypt a saved share and display it in the terminal. |
 | `igloo keyset signer` | Alternate entry point for the signer flow under the keyset namespace. |
 | `igloo keyset status` | Connect to FROSTR relays and ping peers for a saved share. |
+| `igloo keyset policy` | Configure default send/receive rules and peer overrides for a share. |
 
 Use `--help` or `--version` at any time for metadata.
 
