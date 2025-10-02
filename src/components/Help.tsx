@@ -15,6 +15,7 @@ export function Help({version}: HelpProps) {
         <Text>- intro (default)  Show the animated welcome.</Text>
         <Text>- setup            Step through signer bootstrapping.</Text>
         <Text>- about            Outline the FROSTR stack.</Text>
+        <Text>- signer           Decrypt a share and run it as a signer.</Text>
         <Text>- status           Check peer reachability with a saved share.</Text>
         <Text>- keyset           Manage keyset creation, saving, loading, status.</Text>
       </Box>
@@ -31,6 +32,8 @@ export function Help({version}: HelpProps) {
         <Text>--output path    Save encrypted shares to a custom directory.</Text>
         <Text>--share value    Identify which saved share to load/status.</Text>
         <Text>--relays list    Override relay list (comma-separated).</Text>
+        <Text>--verbose        Stream signer diagnostics to the console.</Text>
+        <Text>--log-level val  Set signer log verbosity (debug|info|warn|error).</Text>
       </Box>
     </Box>
   );

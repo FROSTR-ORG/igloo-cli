@@ -10,6 +10,7 @@ export default defineConfig({
   shims: true,
   splitting: false,
   target: 'node18',
+  external: ['ws'],
   banner: {
     js: '#!/usr/bin/env node'
   }

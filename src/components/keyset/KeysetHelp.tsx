@@ -9,6 +9,7 @@ export function KeysetHelp() {
       <Text>- igloo-cli keyset list     Show saved shares on this machine.</Text>
       <Text>- igloo-cli keyset load     Decrypt a saved share for export.</Text>
       <Text>- igloo-cli keyset status   Ping peers for a saved share.</Text>
+      <Text>- igloo-cli keyset signer   Decrypt and run a share as a signer.</Text>
       <Box marginTop={1}>
         <Text color="gray">
           Example: igloo-cli keyset create --name "Vault" --threshold 2 --total 3
@@ -16,7 +17,7 @@ export function KeysetHelp() {
       </Box>
       <Box>
         <Text color="gray">
-          Automation: --password-file ./pass.txt --output ./shares --share my-share
+          Automation: --password-file ./pass.txt --share my-share --relays wss://relay.damus.io --verbose
         </Text>
       </Box>
     </Box>

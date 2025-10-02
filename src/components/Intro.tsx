@@ -18,8 +18,8 @@ export function Intro({version, commandExamples}: IntroProps) {
       <Box marginTop={1} flexDirection="column">
         <Text color="cyan">What you can do right now</Text>
         <Text>- igloo-cli setup -- bootstrap a FROSTR signing stack</Text>
-        <Text>- igloo-cli about -- learn about the protocol</Text>
-        <Text>- igloo-cli status -- quick health probes (coming soon)</Text>
+        <Text>- igloo-cli signer -- bring a saved share online</Text>
+        <Text>- igloo-cli status -- quick health probes</Text>
       </Box>
 
       <Box marginTop={1} flexDirection="column">

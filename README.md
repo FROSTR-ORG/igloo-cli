@@ -2,6 +2,17 @@
 
 Command-line companion for the FROSTR signing stack, built with React, Ink, and TypeScript.
 
+## Igloo Core Coverage
+
+- [x] Generate and persist encrypted keysets (`keyset create`, `ShareSaver`).
+- [x] Decrypt shares and inspect credentials (`keyset load`).
+- [x] Peer diagnostics via transient Bifrost nodes (`keyset status`).
+- [x] Long-lived signer lifecycle with peer monitoring and logging (`igloo signer`).
+- [ ] Echo transfer utilities (await/send/start echo listeners).
+- [ ] Policy management commands (set/update peer policies from CLI).
+- [ ] Advanced diagnostics (ping monitors, multi-round diagnostics).
+- [ ] Key conversion helpers (npub/nsec/hex transforms).
+
 ## Requirements
 
 - Node.js 18 or newer
@@ -53,22 +64,26 @@ Commands below assume you linked the binary and can run `igloo`. Swap in `igloo-
 | `igloo` | Show the igloo welcome screen with a frostr-themed snowflake. |
 | `igloo setup --threshold 2 --total 3` | Walk through a k-of-n bootstrap checklist. |
 | `igloo about` | Summarize the frostr architecture and sibling projects. |
-| `igloo status` | Placeholder for upcoming health probes. |
+| `igloo status` | Decrypt a saved share and ping peers via default relays. |
+| `igloo signer` | Bring a decrypted share online as a signer until you quit. |
 | `igloo keyset create` | Interactive flow to generate, encrypt, and save shares. |
 | `igloo keyset list` | Display encrypted shares saved on this machine. |
 | `igloo keyset load` | Decrypt a saved share and display it in the terminal. |
+| `igloo keyset signer` | Alternate entry point for the signer flow under the keyset namespace. |
 | `igloo keyset status` | Connect to FROSTR relays and ping peers for a saved share. |
 
 Use `--help` or `--version` at any time for metadata.
 
 ## Automation flags
 
-All keyset subcommands now support non-interactive execution:
+Keyset commands and the signer flow support non-interactive execution:
 
 - `--password value` or `--password-file ./path` — supply the encryption password without prompts.
 - `--output ./directory` — change where encrypted share JSON is written.
-- `--share id` — target a saved share by id/name when loading or running diagnostics.
-- `--relays wss://relay1,wss://relay2` — override the relay list for status checks.
+- `--share id` — target a saved share by id/name when loading, diagnosing, or running the signer.
+- `--relays wss://relay1,wss://relay2` — override the relay list for status checks and the signer.
+- `--verbose` — stream signer diagnostics (toggleable at runtime with the `l` key).
+- `--log-level level` — pick signer log verbosity (`debug`, `info`, `warn`, or `error`).
 
 Example headless keyset creation (same flow as step 4 above):
 
@@ -81,6 +96,21 @@ igloo keyset create \
   --password "ExamplePassphrase123!" \
   --output ./shares
 ```
+
+## Run a signer
+
+Use the signer command once at least one encrypted share is saved locally:
+
+1. **Interactive launch.** Run `igloo signer`, choose a share from the list, and enter its password. The CLI decrypts the share, connects to the default relays, and keeps the signer online until you press `q` or `Esc`.
+2. **Headless launch.** Provide inputs up front to skip prompts:
+
+   ```bash
+   igloo signer --share vault-share-1 --password-file ./pass.txt --relays wss://relay.damus.io --verbose
+   ```
+
+   The process exits when you quit the signer or when relay connectivity drops.
+3. **Toggle live logs.** Press `l` while the signer is running to show or hide relay diagnostics. Combine with `--verbose` (or `--log-level debug`) to start with logs visible.
+4. **Readable summaries.** The on-screen log panel automatically collapses duplicate entries and replaces large payloads with concise summaries (e.g., tag, peer pubkey, relay id), keeping the view focused on actionable events.
 
 ## Diagnostics
 
@@ -102,10 +132,11 @@ Use either `igloo status` or `igloo keyset status` to decrypt a saved share, con
 - `src/components/Help.tsx` — terminal help screen.
 - `src/components/keyset/*.tsx` — keyset creation, listing, and loading flows.
 - `src/components/keyset/KeysetStatus.tsx` — bifrost-backed peer diagnostics.
+- `src/components/keyset/KeysetSigner.tsx` — share selection and signer lifecycle.
 - `src/keyset/*` — filesystem paths, crypto helpers, and share persistence.
 
 ## Next ideas
 
-1. Implement the `status` command to query connected bifrost nodes.
-2. Persist workspace preferences (default thresholds, relay lists).
-3. Import frostr account metadata for richer onboarding prompts.
+1. Allow exporting logs to disk for postmortem analysis.
+2. Surface live relay/peer status in the signer UI once igloo-core exposes richer events.
+3. Explore orchestrating multiple concurrent signers via child processes.
