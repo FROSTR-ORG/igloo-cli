@@ -19,6 +19,7 @@ export function Help({version}: HelpProps) {
         <Text>- status           Check peer reachability with a saved share.</Text>
         <Text>- policy           Configure send/receive permissions per peer.</Text>
         <Text>- keyset           Manage keyset creation, saving, loading, status.</Text>
+        <Text>- keys             Convert between npub/nsec/hex formats.</Text>
       </Box>
       <Box marginTop={1} flexDirection="column">
         <Text color="cyan">Options</Text>
@@ -35,6 +36,14 @@ export function Help({version}: HelpProps) {
         <Text>--relays list    Override relay list (comma-separated).</Text>
         <Text>--verbose        Stream signer diagnostics to the console.</Text>
         <Text>--log-level val  Set signer log verbosity (debug|info|warn|error).</Text>
+        <Text>--from type      Specify input type for keys convert (npub|nsec|hex-public|hex-private).</Text>
+        <Text>--value key      Provide the key value for conversion.</Text>
+        <Text>--npub key       Convert from an npub value.</Text>
+        <Text>--nsec key       Convert from an nsec value.</Text>
+        <Text>--hex-public key Convert from a public hex key.</Text>
+        <Text>--hex-private key Convert from a private hex key.</Text>
+        <Text>--hex key        Generic hex input (requires --kind public|private).</Text>
+        <Text>--kind type      Pair with --hex to set the kind (public|private).</Text>
       </Box>
     </Box>
   );

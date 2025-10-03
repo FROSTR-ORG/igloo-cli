@@ -10,7 +10,9 @@ export const SHARE_FILE_PBKDF2_PREVIOUS_ITERATIONS = 100_000;
 export const SHARE_FILE_PBKDF2_LEGACY_ITERATIONS = 32;
 export const SHARE_FILE_PASSWORD_ENCODING: SharePasswordEncoding = 'sha256';
 export const SHARE_FILE_SALT_LENGTH_BYTES = 16;
-export const SHARE_FILE_SALT_LEGACY_EXPANDED_BYTES = 32;
+export const SHARE_FILE_SALT_PBKDF2_EXPANDED_BYTES = 32;
+export const SHARE_FILE_IV_LENGTH_BYTES = 24;
+export const SHARE_FILE_IV_LEGACY_LENGTH_BYTES = 12;
 
 export type SharePasswordEncoding = 'sha256' | 'raw';
 
@@ -93,7 +95,9 @@ export function encryptPayload(secretHex: string, payload: string, ivHex?: strin
 } {
   const payloadBytes = stringToUint8(payload);
   const secretBytes = hexToUint8(secretHex, 32);
-  const ivBytes = ivHex ? hexToUint8(ivHex, 24) : new Uint8Array(randomBytes(24));
+  const ivBytes = ivHex
+    ? hexToUint8(ivHex, SHARE_FILE_IV_LENGTH_BYTES)
+    : new Uint8Array(randomBytes(SHARE_FILE_IV_LENGTH_BYTES));
   const cipher = gcm(secretBytes, ivBytes);
   const encrypted = cipher.encrypt(payloadBytes);
   const combined = new Uint8Array(ivBytes.length + encrypted.length);
@@ -106,10 +110,17 @@ export function encryptPayload(secretHex: string, payload: string, ivHex?: strin
   };
 }
 
-export function decryptPayload(secretHex: string, encoded: string): string {
+export function decryptPayload(
+  secretHex: string,
+  encoded: string,
+  ivLength = SHARE_FILE_IV_LENGTH_BYTES
+): string {
   const combined = Buffer.from(encoded, 'base64url');
-  const iv = combined.subarray(0, 24);
-  const encrypted = combined.subarray(24);
+  if (combined.length <= ivLength) {
+    throw new Error(`Ciphertext too short for IV length ${ivLength}`);
+  }
+  const iv = combined.subarray(0, ivLength);
+  const encrypted = combined.subarray(ivLength);
   const secretBytes = hexToUint8(secretHex, 32);
   const cipher = gcm(secretBytes, iv);
   const decrypted = cipher.decrypt(encrypted);
@@ -203,11 +214,19 @@ function buildSaltLengthCandidates(record: Pick<ShareFileRecord, 'version' | 'sa
   pushUnique(declaredLength);
   pushUnique(SHARE_FILE_SALT_LENGTH_BYTES);
 
-  if (record.version === undefined || record.version < SHARE_FILE_VERSION) {
-    pushUnique(SHARE_FILE_SALT_LEGACY_EXPANDED_BYTES);
-  }
+  pushUnique(SHARE_FILE_SALT_PBKDF2_EXPANDED_BYTES);
 
   return candidates;
+}
+
+function buildIvLengthCandidates(record: Pick<ShareFileRecord, 'version'>): number[] {
+  const isLegacy = record.version === undefined || record.version < SHARE_FILE_VERSION;
+  const primary = isLegacy ? SHARE_FILE_IV_LEGACY_LENGTH_BYTES : SHARE_FILE_IV_LENGTH_BYTES;
+  const secondary = isLegacy ? SHARE_FILE_IV_LENGTH_BYTES : SHARE_FILE_IV_LEGACY_LENGTH_BYTES;
+
+  return [primary, secondary].filter((value, index, array) => {
+    return value > 0 && array.indexOf(value) === index;
+  });
 }
 
 export function decryptShareCredential(
@@ -219,28 +238,39 @@ export function decryptShareCredential(
   iterations: number;
   encoding: SharePasswordEncoding;
   saltLength: number;
+  ivLength: number;
 } {
   const candidates = buildIterationCandidates(record);
   const encodings = buildPasswordEncodingCandidates(record);
   const saltLengths = buildSaltLengthCandidates(record);
+  const ivLengths = buildIvLengthCandidates(record);
   let lastError: unknown = null;
 
   for (const encoding of encodings) {
     for (const iterations of candidates) {
       for (const saltLength of saltLengths) {
-        try {
-          const secretHex = deriveSecret(
-            password,
-            record.salt,
-            iterations,
-            encoding,
-            saltLength
-          );
-          const shareCredential = decryptPayload(secretHex, record.share);
-          assertShareCredentialFormat(shareCredential);
-          return {shareCredential, secretHex, iterations, encoding, saltLength};
-        } catch (error) {
-          lastError = error;
+        for (const ivLength of ivLengths) {
+          try {
+            const secretHex = deriveSecret(
+              password,
+              record.salt,
+              iterations,
+              encoding,
+              saltLength
+            );
+            const shareCredential = decryptPayload(secretHex, record.share, ivLength);
+            assertShareCredentialFormat(shareCredential);
+            return {
+              shareCredential,
+              secretHex,
+              iterations,
+              encoding,
+              saltLength,
+              ivLength
+            };
+          } catch (error) {
+            lastError = error;
+          }
         }
       }
     }

@@ -11,7 +11,7 @@ import {
   SHARE_FILE_VERSION,
   SHARE_FILE_PBKDF2_ITERATIONS,
   SHARE_FILE_PASSWORD_ENCODING,
-  SHARE_FILE_SALT_LENGTH_BYTES,
+  SHARE_FILE_SALT_PBKDF2_EXPANDED_BYTES,
   createDefaultPolicy
 } from '../../keyset/index.js';
 import {Prompt} from '../ui/Prompt.js';
@@ -122,7 +122,7 @@ export function ShareSaver({
       salt,
       SHARE_FILE_PBKDF2_ITERATIONS,
       SHARE_FILE_PASSWORD_ENCODING,
-      SHARE_FILE_SALT_LENGTH_BYTES
+      SHARE_FILE_SALT_PBKDF2_EXPANDED_BYTES
     );
     const {cipherText} = encryptPayload(secret, share.credential);
 
@@ -208,7 +208,7 @@ export function ShareSaver({
                 salt,
                 SHARE_FILE_PBKDF2_ITERATIONS,
                 SHARE_FILE_PASSWORD_ENCODING,
-                SHARE_FILE_SALT_LENGTH_BYTES
+                SHARE_FILE_SALT_PBKDF2_EXPANDED_BYTES
               );
               const {cipherText} = encryptPayload(secret, candidate.credential);
 

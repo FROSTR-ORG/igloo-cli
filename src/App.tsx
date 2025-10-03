@@ -4,6 +4,8 @@ import {Setup} from './components/Setup.js';
 import {About} from './components/About.js';
 import {KeysetCreate} from './components/keyset/KeysetCreate.js';
 import {KeysetHelp} from './components/keyset/KeysetHelp.js';
+import {KeyConvert} from './components/keys/KeyConvert.js';
+import {KeyHelp} from './components/keys/KeyHelp.js';
 import {SharePolicy} from './components/share/SharePolicy.js';
 import {ShareHelp} from './components/share/ShareHelp.js';
 import {ShareList} from './components/share/ShareList.js';
@@ -41,6 +43,59 @@ function renderKeyset(args: string[], flags: Record<string, string | boolean>) {
     default:
       return <KeysetHelp />;
   }
+}
+
+function hasKeyInputs(flags: Record<string, string | boolean>) {
+  const stringKeys = [
+    'npub',
+    'nsec',
+    'hex',
+    'hex-public',
+    'hex-private',
+    'public-hex',
+    'private-hex',
+    'hexPublic',
+    'hexPrivate',
+    'publicHex',
+    'privateHex',
+    'value'
+  ];
+
+  return stringKeys.some(key => {
+    const value = flags[key];
+    return typeof value === 'string' && value.trim().length > 0;
+  });
+}
+
+const KEY_TYPE_SUBCOMMANDS = new Set([
+  'npub',
+  'nsec',
+  'hex-public',
+  'hex-private',
+  'public-hex',
+  'private-hex',
+  'public',
+  'private',
+  'secret'
+]);
+
+function renderKeys(args: string[], flags: Record<string, string | boolean>) {
+  const subcommand = args[0]?.toLowerCase();
+  const remainingArgs = subcommand ? args.slice(1) : args;
+
+  if (subcommand === 'convert') {
+    return <KeyConvert flags={flags} args={remainingArgs} />;
+  }
+
+  if (subcommand && KEY_TYPE_SUBCOMMANDS.has(subcommand)) {
+    return <KeyConvert flags={flags} args={args} />;
+  }
+
+  if (!subcommand && hasKeyInputs(flags)) {
+    return <KeyConvert flags={flags} args={args} />;
+  }
+
+  return <KeyHelp />;
 }
 
 function renderShare(args: string[], flags: Record<string, string | boolean>) {
@@ -86,6 +141,8 @@ export function App({command, args, flags, version}: AppProps) {
       return renderShare(args, flags);
     case 'keyset':
       return renderKeyset(args, flags);
+    case 'keys':
+      return renderKeys(args, flags);
     default:
       return (
         <Intro
@@ -95,7 +152,8 @@ export function App({command, args, flags, version}: AppProps) {
             'igloo-cli keyset create --password-file ./pass.txt --output ./shares',
             'igloo-cli share add --group bfgroup1... --share bfshare1...',
             'igloo-cli share status --share vault-share-1 --password-file ./pass.txt',
-            'igloo-cli signer --share vault-share-1 --password-file ./pass.txt'
+            'igloo-cli signer --share vault-share-1 --password-file ./pass.txt',
+            'igloo-cli keys convert --from nsec --value nsec1example...'
           ]}
         />
       );

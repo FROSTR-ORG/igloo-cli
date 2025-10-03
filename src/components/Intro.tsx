@@ -23,6 +23,7 @@ export function Intro({version, commandExamples}: IntroProps) {
         <Text>- igloo-cli share list     -- review saved shares on this device</Text>
         <Text>- igloo-cli share status   -- check relay and peer reachability</Text>
         <Text>- igloo-cli share policy   -- tune defaults and peer overrides</Text>
+        <Text>- igloo-cli keys convert   -- translate between npub/nsec/hex</Text>
         <Text>- igloo-cli signer         -- bring a share online as a signer</Text>
       </Box>
 

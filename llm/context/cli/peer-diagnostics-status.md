@@ -17,14 +17,14 @@ Provide a CLI flow to verify relay reachability and peer liveness using existing
 2. Resolve automation password (direct or file) before prompting; error out early if not available.
 3. Derive the AES key with `deriveSecret` and decrypt the share using `decryptPayload`.
 4. Spin up a transient bifrost node with `createAndConnectNode`, suppressing noisy logging.
-5. Call `checkPeerStatus(groupCredential, shareCredential)` to ping each peer and collect `online/offline` results.
+5. Try `checkPeerStatus(groupCredential, shareCredential)` first; when it fails because older shares omit a `pubkey`, decode the packages locally, derive the signer pubkey from the group commits, convert everything into the BIP340 format Bifrost expects, and ping each peer manually with `pingPeer`.
 6. Close the node via `closeNode`, ignoring failures to avoid masking diagnostics output.
 7. Render relays and peer statuses (green/red) or detailed error messages if the run failed.
 
 ## Error handling
 - Password issues (length, wrong password) are surfaced before attempting network calls.
 - Password-file read errors are reported immediately, keeping the CLI non-interactive friendly.
-- Node or relay failures bubble up through the `NodeError` message for simple debugging.
+- Node or relay failures bubble up through the `NodeError` message for simple debugging, and compatibility fallbacks combine the original failure with the manual ping attempt when both paths fail.
 
 ## Dependencies
 - Requires `@frostr/igloo-core` and `@frostr/bifrost` to build nodes and run peer pings.
