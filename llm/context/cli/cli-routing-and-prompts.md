@@ -4,11 +4,13 @@
 - Top-level commands (`src/cli.tsx`, `src/App.tsx`):
   - `intro`, `setup`, `about` — existing informational screens.
   - `status` — delegates to keyset diagnostics.
-  - `keyset <subcommand>` — create, list, load, status, help.
-- `parseArgv` normalises shorthand flags (`-t`, `-T`) and captures positional args allowing subcommand chains like `keyset status --share vault_share_1`.
+- `share <subcommand>` — share-level flows (`add`, `list`, `load`, `status`, `signer`, `policy`).
+  - `keyset <subcommand>` — keyset generation helpers (create/help).
+- `parseArgv` normalises shorthand flags (`-t`, `-T`) and captures positional args allowing subcommand chains like `share status --share vault_share_1`.
 
 ## Ink router
 - `App` inspects `command` and dispatches to subcomponents, passing along `args` and `flags`.
+- `renderShare` handles the share namespace (add/list/load/status/signer/policy) and emits a deprecation notice when reached via legacy aliases.
 - `renderKeyset` routes to the appropriate keyset sub-flow; defaults to `KeysetHelp` for unknown subcommands.
 
 ## Prompt resilience

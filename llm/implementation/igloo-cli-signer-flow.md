@@ -1,7 +1,7 @@
 # igloo-cli Signer Flow Implementation
 
 ## Overview
-`src/components/keyset/KeysetSigner.tsx` implements both `igloo signer` and `igloo keyset signer`. The Ink view enumerates encrypted shares, asks the operator to choose/decrypt one (or honours automation flags), then stands up a long-lived Bifrost node via `@frostr/igloo-core`. Router wiring in `src/App.tsx` exposes the commands, while `Help.tsx`, `KeysetHelp.tsx`, and the README describe the workflow.
+`src/components/keyset/KeysetSigner.tsx` implements the `igloo signer` flow. The Ink view enumerates encrypted shares, asks the operator to choose/decrypt one (or honours automation flags), then stands up a long-lived Bifrost node via `@frostr/igloo-core`. Router wiring in `src/App.tsx` exposes the commands, while `Help.tsx` and the README describe the workflow.
 
 ## Phase orchestration
 Local state tracks four phases:
@@ -47,7 +47,7 @@ Listeners attached while running:
 - Keyboard input → `q`/`Esc` stops, `l` toggles logs.
 
 ## CLI integration
-`App.tsx` routes `signer` and `keyset signer` to the component, adds the new command to intro examples, and continues to default to the intro screen when no command is provided. `Help.tsx` describes global flags (`--verbose`, `--log-level`, etc.), while `KeysetHelp.tsx` highlights the keyset namespace entry point and automation examples. The README now features signer-specific instructions (interactive, headless, and log toggling).
+`App.tsx` routes `signer` to the component, adds the command to intro examples, and continues to default to the intro screen when no command is provided. `Help.tsx` describes global flags (`--verbose`, `--log-level`, etc.), and the README documents signer-specific instructions (interactive, headless, and log toggling).
 
 ## Future considerations
 - Export logs or relay diagnostics to disk for postmortems.

@@ -1,18 +1,18 @@
-# Peer Diagnostics (`status` / `keyset status`)
+# Peer Diagnostics (`status` / `share status`)
 
 ## Goal
 Provide a CLI flow to verify relay reachability and peer liveness using existing encrypted shares, paralleling the health checks planned for Igloo Desktop.
 
 ## Entry points
-- `igloo-cli status` — top-level alias routed through `App` to `KeysetStatus` with full flag support.
-- `igloo-cli keyset status [--share id]` — namespaced variant for scripted environments.
+- `igloo-cli status` — top-level alias routed through `App` to `ShareStatus` with full flag support.
+- `igloo-cli share status [--share id]` — canonical share namespace command.
 
 ## Flags
 - `--password` / `--password-file` — decrypt the share without prompting.
 - `--share value` — choose a specific saved share by id or name (default prompt picks from list).
 - `--relays wss://relay1,wss://relay2` — override default ping relays from `@frostr/igloo-core`.
 
-## Diagnostics flow (`src/components/keyset/KeysetStatus.tsx`)
+## Diagnostics flow (`src/components/share/ShareStatus.tsx` → `KeysetStatus`)
 1. Load saved shares via `readShareFiles()` and optional `--share` preselection.
 2. Resolve automation password (direct or file) before prompting; error out early if not available.
 3. Derive the AES key with `deriveSecret` and decrypt the share using `decryptPayload`.

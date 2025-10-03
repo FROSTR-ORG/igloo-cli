@@ -3,12 +3,14 @@ import {Intro} from './components/Intro.js';
 import {Setup} from './components/Setup.js';
 import {About} from './components/About.js';
 import {KeysetCreate} from './components/keyset/KeysetCreate.js';
-import {KeysetList} from './components/keyset/KeysetList.js';
-import {KeysetLoad} from './components/keyset/KeysetLoad.js';
 import {KeysetHelp} from './components/keyset/KeysetHelp.js';
-import {KeysetStatus} from './components/keyset/KeysetStatus.js';
-import {KeysetSigner} from './components/keyset/KeysetSigner.js';
-import {KeysetPolicy} from './components/keyset/KeysetPolicy.js';
+import {SharePolicy} from './components/share/SharePolicy.js';
+import {ShareHelp} from './components/share/ShareHelp.js';
+import {ShareList} from './components/share/ShareList.js';
+import {ShareLoad} from './components/share/ShareLoad.js';
+import {ShareStatus} from './components/share/ShareStatus.js';
+import {ShareSigner} from './components/share/ShareSigner.js';
+import {ShareAdd} from './components/share/ShareAdd.js';
 
 type AppProps = {
   command: string;
@@ -34,20 +36,33 @@ function renderKeyset(args: string[], flags: Record<string, string | boolean>) {
   switch (subcommand) {
     case 'create':
       return <KeysetCreate flags={flags} />;
-    case 'list':
-      return <KeysetList />;
-    case 'load':
-      return <KeysetLoad args={args.slice(1)} />;
-    case 'status':
-      return <KeysetStatus flags={flags} args={args.slice(1)} />;
-    case 'signer':
-      return <KeysetSigner flags={flags} args={args.slice(1)} />;
-    case 'policy':
-      return <KeysetPolicy flags={flags} args={args.slice(1)} />;
     case undefined:
       return <KeysetHelp />;
     default:
       return <KeysetHelp />;
+  }
+}
+
+function renderShare(args: string[], flags: Record<string, string | boolean>) {
+  const subcommand = args[0]?.toLowerCase();
+
+  switch (subcommand) {
+    case 'policy':
+      return <SharePolicy flags={flags} args={args.slice(1)} />;
+    case 'add':
+      return <ShareAdd flags={flags} args={args.slice(1)} />;
+    case 'list':
+      return <ShareList />;
+    case 'load':
+      return <ShareLoad args={args.slice(1)} />;
+    case 'status':
+      return <ShareStatus flags={flags} args={args.slice(1)} />;
+    case 'signer':
+      return <ShareSigner flags={flags} args={args.slice(1)} />;
+    case undefined:
+      return <ShareHelp />;
+    default:
+      return <ShareHelp />;
   }
 }
 
@@ -62,11 +77,13 @@ export function App({command, args, flags, version}: AppProps) {
     case 'about':
       return <About />;
     case 'status':
-      return <KeysetStatus flags={flags} args={args} />;
+      return <ShareStatus flags={flags} args={args} />;
     case 'signer':
-      return <KeysetSigner flags={flags} args={args} />;
+      return <ShareSigner flags={flags} args={args} />;
     case 'policy':
-      return <KeysetPolicy flags={flags} args={args} />;
+      return <SharePolicy flags={flags} args={args} invokedVia="alias:root:policy" />;
+    case 'share':
+      return renderShare(args, flags);
     case 'keyset':
       return renderKeyset(args, flags);
     default:
@@ -75,9 +92,10 @@ export function App({command, args, flags, version}: AppProps) {
           version={version}
           commandExamples={[
             'igloo-cli setup --threshold 2 --total 3',
-            'igloo-cli about',
-            'igloo-cli signer --share my-share --password-file ./pass.txt',
-            'igloo-cli keyset create --password-file ./pass.txt --output ./shares'
+            'igloo-cli keyset create --password-file ./pass.txt --output ./shares',
+            'igloo-cli share add --group bfgroup1... --share bfshare1...',
+            'igloo-cli share status --share vault-share-1 --password-file ./pass.txt',
+            'igloo-cli signer --share vault-share-1 --password-file ./pass.txt'
           ]}
         />
       );

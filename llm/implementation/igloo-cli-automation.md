@@ -3,7 +3,8 @@
 ## Summary
 - Added non-interactive execution path for `keyset create`, including password-file support and custom output directories.
 - Introduced reusable Ink prompt helper that disables raw mode when stdin is not a TTY.
-- Created bifrost-backed peer diagnostics (`status` / `keyset status`) that decrypt a saved share and ping peers over configurable relays.
+- Created bifrost-backed peer diagnostics (`status` / `share status`) that decrypt a saved share and ping peers over configurable relays.
+- Added a guided share import workflow (`share add`) that validates the group credential before encrypting the share file.
 - Wired @frostr/igloo-core and its noble dependencies into the CLI runtime.
 
 ## Key files

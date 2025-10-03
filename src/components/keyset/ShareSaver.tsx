@@ -93,7 +93,7 @@ export function ShareSaver({
       ) : null}
       <Box marginTop={1}>
         <Text color="gray">
-          Run `igloo-cli keyset list` to review your saved shares later.
+          Run `igloo-cli share list` to review your saved shares later.
         </Text>
       </Box>
     </Box>

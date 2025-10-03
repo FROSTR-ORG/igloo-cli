@@ -4,9 +4,10 @@ Command-line companion for the FROSTR signing stack, built with React, Ink, and 
 
 ## Igloo Core Coverage
 
-- [x] Generate and persist encrypted keysets (`keyset create`, `ShareSaver`).
-- [x] Decrypt shares and inspect credentials (`keyset load`).
-- [x] Peer diagnostics via transient Bifrost nodes (`keyset status`).
+- [x] Generate and persist encrypted shares (`keyset create`, `ShareSaver`).
+- [x] Import standalone shares into local storage (`share add`).
+- [x] Decrypt shares and inspect credentials (`share load`).
+- [x] Peer diagnostics via transient Bifrost nodes (`share status`).
 - [x] Long-lived signer lifecycle with peer monitoring and logging (`igloo signer`).
 - [ ] Echo transfer utilities (await/send/start echo listeners).
 - [x] Policy management commands (set/update peer policies from CLI).
@@ -38,7 +39,7 @@ The `npm link` step exposes local binaries named `igloo` and `igloo-cli`. Skip i
    - Choose `generate` when prompted for the secret key so the CLI mints a fresh `nsec`/`npub` pair.
    - Supply a strong password and pick the output directory (press Enter to accept the default).
    - The success screen prints the new `nsec`—store it securely.
-3. **Review the saved shares.** Run `igloo keyset list` to confirm three encrypted files were written. Files live under `~/Library/Application Support/igloo-cli/shares` on macOS (or the directory you chose).
+3. **Review the saved shares.** Run `igloo share list` to confirm three encrypted files were written. Files live under `~/Library/Application Support/igloo-cli/shares` on macOS (or the directory you chose).
 4. **Optional: automate the same flow.** Provide every input as a flag to skip prompts:
 
    ```bash
@@ -53,7 +54,7 @@ The `npm link` step exposes local binaries named `igloo` and `igloo-cli`. Skip i
 
    The CLI prints the generated `nsec` and writes files such as `team-recovery_share_1.json` to `./shares`.
 
-Use `igloo keyset load --share <filename>` if you need to decrypt one of the shares later (you will be prompted for the password you selected).
+Use `igloo share load --share <filename>` if you need to decrypt one of the shares later (you will be prompted for the password you selected).
 
 ## Commands
 
@@ -67,11 +68,14 @@ Commands below assume you linked the binary and can run `igloo`. Swap in `igloo-
 | `igloo status` | Decrypt a saved share and ping peers via default relays. |
 | `igloo signer` | Bring a decrypted share online as a signer until you quit. |
 | `igloo keyset create` | Interactive flow to generate, encrypt, and save shares. |
-| `igloo keyset list` | Display encrypted shares saved on this machine. |
-| `igloo keyset load` | Decrypt a saved share and display it in the terminal. |
-| `igloo keyset signer` | Alternate entry point for the signer flow under the keyset namespace. |
-| `igloo keyset status` | Connect to FROSTR relays and ping peers for a saved share. |
-| `igloo keyset policy` | Configure default send/receive rules and peer overrides for a share. |
+| `igloo share add` | Import a single share using an existing group credential. |
+| `igloo share list` | Display encrypted shares saved on this machine. |
+| `igloo share load` | Decrypt a saved share and display it in the terminal. |
+| `igloo share signer` | Bring a decrypted share online as a signer until you quit. |
+| `igloo share status` | Connect to FROSTR relays and ping peers for a saved share. |
+| `igloo share policy` | Configure default send/receive rules and peer overrides for a share. |
+
+Saved-share operations (`add`, `list`, `load`, `signer`, `status`, `policy`) all live under the `igloo share …` namespace.
 
 Use `--help` or `--version` at any time for metadata.
 
@@ -115,7 +119,7 @@ Use the signer command once at least one encrypted share is saved locally:
 
 ## Diagnostics
 
-Use either `igloo status` or `igloo keyset status` to decrypt a saved share, connect a temporary bifrost node, and ping each peer. The command prints relay endpoints plus a color-coded list of online/offline peers. Provide `--password` or `--password-file` for automation, and customise relays with `--relays` when needed.
+Use either `igloo status` or `igloo share status` to decrypt a saved share, connect a temporary bifrost node, and ping each peer. The command prints relay endpoints plus a color-coded list of online/offline peers. Provide `--password` or `--password-file` for automation, and customise relays with `--relays` when needed.
 
 ## Development scripts
 

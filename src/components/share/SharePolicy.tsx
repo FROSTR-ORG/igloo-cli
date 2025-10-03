@@ -1,4 +1,4 @@
-import React, {useEffect, useMemo, useState} from 'react';
+import React, {useEffect, useMemo, useState, useRef} from 'react';
 import {Box, Text} from 'ink';
 import path from 'node:path';
 import {normalizePubkey, decodeGroup} from '@frostr/igloo-core';
@@ -16,10 +16,12 @@ import {
   ensurePolicy
 } from '../../keyset/index.js';
 import {Prompt} from '../ui/Prompt.js';
+import {ShareNamespaceFrame, ShareInvocationHint} from './ShareNamespaceFrame.js';
 
-export type KeysetPolicyProps = {
+export type SharePolicyProps = {
   flags: Record<string, string | boolean>;
   args: string[];
+  invokedVia?: ShareInvocationHint;
 };
 
 type LoadState = {
@@ -218,17 +220,28 @@ async function persistPolicy(
   if (!refreshed) {
     throw new Error('Policy saved but share could not be reloaded.');
   }
+  if (refreshed.filepath !== share.filepath) {
+    throw new Error(`Filepath mismatch after save: original "${share.filepath}", refreshed "${refreshed.filepath}"`);
+  }
 
   return refreshed;
 }
 
-export function KeysetPolicy({flags, args}: KeysetPolicyProps) {
+export function SharePolicy({flags, args, invokedVia}: SharePolicyProps) {
   const [state, setState] = useState<LoadState>({loading: true, error: null, shares: []});
   const [mode, setMode] = useState<Mode>('select');
   const [selectedShare, setSelectedShare] = useState<ShareMetadata | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [draftDefaults, setDraftDefaults] = useState<DraftDefaults | null>(null);
   const [draftPeer, setDraftPeer] = useState<DraftPeer | null>(null);
+  const [shouldExit, setShouldExit] = useState(false);
+
+  const appliedPreselectionRef = useRef(false);
+
+  const invocation = invokedVia ?? 'share';
+  const renderFrame = (content: React.ReactNode) => (
+    <ShareNamespaceFrame invokedVia={invocation}>{content}</ShareNamespaceFrame>
+  );
 
   const shareToken = typeof flags.share === 'string' ? flags.share : args[0];
 
@@ -255,7 +268,8 @@ export function KeysetPolicy({flags, args}: KeysetPolicyProps) {
   }, [state.shares, shareToken]);
 
   useEffect(() => {
-    if (preselectedShare && !selectedShare) {
+    if (preselectedShare && !selectedShare && !appliedPreselectionRef.current) {
+      appliedPreselectionRef.current = true;
       setSelectedShare(preselectedShare);
       setMode('menu');
     }
@@ -281,8 +295,14 @@ export function KeysetPolicy({flags, args}: KeysetPolicyProps) {
     setFeedback(message);
   };
 
+  useEffect(() => {
+    if (shouldExit) {
+      process.exit(0);
+    }
+  }, [shouldExit]);
+
   if (state.loading) {
-    return (
+    return renderFrame(
       <Box flexDirection="column">
         <Text color="cyan">Loading saved shares…</Text>
       </Box>
@@ -290,7 +310,7 @@ export function KeysetPolicy({flags, args}: KeysetPolicyProps) {
   }
 
   if (state.error) {
-    return (
+    return renderFrame(
       <Box flexDirection="column">
         <Text color="red">{state.error}</Text>
       </Box>
@@ -298,7 +318,7 @@ export function KeysetPolicy({flags, args}: KeysetPolicyProps) {
   }
 
   if (state.shares.length === 0) {
-    return (
+    return renderFrame(
       <Box flexDirection="column">
         <Text color="yellow">No saved shares available. Create a keyset before configuring policy.</Text>
       </Box>
@@ -306,7 +326,7 @@ export function KeysetPolicy({flags, args}: KeysetPolicyProps) {
   }
 
   if (mode === 'select') {
-    return (
+    return renderFrame(
       <Box flexDirection="column">
         <Text color="cyanBright">Select a share to configure policy</Text>
         {state.shares.map((share, index) => (
@@ -339,7 +359,7 @@ export function KeysetPolicy({flags, args}: KeysetPolicyProps) {
   }
 
   if (!selectedShare) {
-    return (
+    return renderFrame(
       <Box flexDirection="column">
         <Text color="red">Share selection missing.</Text>
       </Box>
@@ -350,8 +370,15 @@ export function KeysetPolicy({flags, args}: KeysetPolicyProps) {
   const peerEntries = Object.entries(policy.peers ?? {}).sort(([a], [b]) => a.localeCompare(b));
   const keysetLabel = deriveKeysetLabel(selectedShare);
 
+  useEffect(() => {
+    if (mode === 'remove-peer' && peerEntries.length === 0) {
+      setMode('menu');
+      setFeedback('No peer overrides to remove.');
+    }
+  }, [mode, peerEntries.length]);
+
   if (mode === 'saving') {
-    return (
+    return renderFrame(
       <Box flexDirection="column">
         <Text color="cyan">Persisting policy changes…</Text>
       </Box>
@@ -359,7 +386,7 @@ export function KeysetPolicy({flags, args}: KeysetPolicyProps) {
   }
 
   if (mode === 'menu') {
-    return (
+    return renderFrame(
       <Box flexDirection="column">
         <Text color="cyanBright">Policy controls: {selectedShare.name}</Text>
         <Text color="gray">Share id: {selectedShare.id}</Text>
@@ -442,7 +469,8 @@ export function KeysetPolicy({flags, args}: KeysetPolicyProps) {
               return undefined;
             }
             if (trimmed === '5') {
-              process.exit(0);
+              setShouldExit(true);
+              return undefined;
             }
             return 'Choose 1, 2, 3, 4, or 5.';
           }}
@@ -452,7 +480,7 @@ export function KeysetPolicy({flags, args}: KeysetPolicyProps) {
   }
 
   if (mode === 'defaults-send' && draftDefaults) {
-    return (
+    return renderFrame(
       <Box flexDirection="column">
         <Text color="cyanBright">Update defaults — step 1 of 2</Text>
         <Text color="gray">
@@ -479,7 +507,7 @@ export function KeysetPolicy({flags, args}: KeysetPolicyProps) {
   }
 
   if (mode === 'defaults-receive' && draftDefaults) {
-    return (
+    return renderFrame(
       <Box flexDirection="column">
         <Text color="cyanBright">Update defaults — step 2 of 2</Text>
         <Text color="gray">
@@ -518,7 +546,7 @@ export function KeysetPolicy({flags, args}: KeysetPolicyProps) {
   }
 
   if (mode === 'peer-select') {
-    return (
+    return renderFrame(
       <Box flexDirection="column">
         <Text color="cyanBright">Peer override — choose a peer</Text>
         <Text color="gray">Keyset: {keysetLabel}</Text>
@@ -576,7 +604,7 @@ export function KeysetPolicy({flags, args}: KeysetPolicyProps) {
   }
 
   if (mode === 'peer-custom' && draftPeer) {
-    return (
+    return renderFrame(
       <Box flexDirection="column">
         <Text color="cyanBright">Peer override — enter pubkey</Text>
         <Text color="gray">Provide a peer pubkey (hex or npub). Leave blank to cancel.</Text>
@@ -614,7 +642,7 @@ export function KeysetPolicy({flags, args}: KeysetPolicyProps) {
   }
 
   if (mode === 'peer-send' && draftPeer) {
-    return (
+    return renderFrame(
       <Box flexDirection="column">
         <Text color="cyanBright">Peer override — step 2 of 3</Text>
         <Text color="gray">Peer: {formatPeerLabel(draftPeer, keysetLabel)}</Text>
@@ -646,7 +674,7 @@ export function KeysetPolicy({flags, args}: KeysetPolicyProps) {
   }
 
   if (mode === 'peer-receive' && draftPeer) {
-    return (
+    return renderFrame(
       <Box flexDirection="column">
         <Text color="cyanBright">Peer override — step 3 of 3</Text>
         <Text color="gray">Peer: {formatPeerLabel(draftPeer, keysetLabel)}</Text>
@@ -689,12 +717,10 @@ export function KeysetPolicy({flags, args}: KeysetPolicyProps) {
 
   if (mode === 'remove-peer') {
     if (peerEntries.length === 0) {
-      setMode('menu');
-      setFeedback('No peer overrides to remove.');
       return null;
     }
 
-    return (
+    return renderFrame(
       <Box flexDirection="column">
         <Text color="cyanBright">Remove peer override</Text>
         {peerEntries.map(([peer], index) => (
@@ -737,7 +763,7 @@ export function KeysetPolicy({flags, args}: KeysetPolicyProps) {
     );
   }
 
-  return (
+  return renderFrame(
     <Box flexDirection="column">
       <Text color="red">Unknown policy state.</Text>
     </Box>
