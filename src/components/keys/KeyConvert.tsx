@@ -102,18 +102,12 @@ function inferInputType(value: string): InputType | undefined {
   if (lower.startsWith('nsec1')) {
     return 'nsec';
   }
-  const hex = stripHexPrefix(trimmed);
-  if (/^[0-9a-fA-F]{64}$/.test(hex)) {
-    try {
-      hexToNsec(hex);
-      return 'hex-private';
-    } catch {}
-    try {
-      hexToNpub(hex);
-      return 'hex-public';
-    } catch {}
-  }
   return undefined;
+}
+
+function isRawHexKey(value: string): boolean {
+  const hex = stripHexPrefix(value.trim());
+  return /^[0-9a-fA-F]{64}$/.test(hex);
 }
 
 function formatTypeLabel(type: InputType) {
@@ -170,9 +164,13 @@ function detectInput(
   if (valueOnly) {
     const inferred = inferInputType(valueOnly);
     if (!inferred) {
+      const suffix = isRawHexKey(valueOnly)
+        ? ' Detected a 64-character hex value. Specify --from hex-public|hex-private (or use --hex with --kind public|private).'
+        : '';
       return {
         error:
-          'Could not infer key type from --value. Add --from npub|nsec|hex-public|hex-private.'
+          'Could not infer key type from --value. Add --from npub|nsec|hex-public|hex-private.' +
+          suffix
       };
     }
     addCandidate(inferred, valueOnly, '--value');
@@ -233,8 +231,13 @@ function detectInput(
     } else {
       const inferred = inferInputType(args[0]);
       if (!inferred) {
+        const suffix = isRawHexKey(args[0])
+          ? ' Detected a 64-character hex value. Specify --from hex-public|hex-private (or use --hex with --kind public|private).'
+          : '';
         return {
-          error: `Could not infer key type from "${args[0]}". Use --from npub|nsec|hex-public|hex-private.`
+          error:
+            `Could not infer key type from "${args[0]}". Use --from npub|nsec|hex-public|hex-private.` +
+            suffix
         };
       }
       addCandidate(inferred, args[0], 'positional');
