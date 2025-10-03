@@ -5,8 +5,13 @@ import {
   createAndConnectNode,
   closeNode,
   checkPeerStatus,
-  DEFAULT_PING_RELAYS
+  DEFAULT_PING_RELAYS,
+  DEFAULT_PING_TIMEOUT,
+  decodeGroup,
+  decodeShare,
+  pingPeer
 } from '@frostr/igloo-core';
+import {convert_pubkey} from '@frostr/bifrost/util';
 import {readShareFiles, decryptShareCredential, ShareMetadata} from '../../keyset/index.js';
 import {Prompt} from '../ui/Prompt.js';
 
@@ -30,6 +35,190 @@ type DiagnosticsResult = {
 };
 
 type Phase = 'select' | 'password' | 'diagnosing' | 'result';
+
+function normaliseString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.length > 0 ? value.trim().toLowerCase() : undefined;
+}
+
+function extractCommitPubkey(commit: any): string | undefined {
+  if (!commit || typeof commit !== 'object') {
+    return undefined;
+  }
+
+  const candidates = [commit.pubkey, commit.pub, commit.public_key];
+  return candidates.find(candidate => typeof candidate === 'string' && candidate.length > 0);
+}
+
+function deriveSelfPubkeyFromPackages(groupPackage: any, sharePackage: any): string | undefined {
+  const commits = Array.isArray(groupPackage?.commits) ? groupPackage.commits : [];
+
+  const sharePubkeyCandidates = [sharePackage?.pubkey, sharePackage?.pub, sharePackage?.public_key];
+  const directPubkey = sharePubkeyCandidates.find(
+    candidate => typeof candidate === 'string' && candidate.length > 0
+  );
+  if (directPubkey) {
+    return directPubkey;
+  }
+
+  const shareIdxRaw = sharePackage?.idx ?? sharePackage?.index ?? sharePackage?.member_idx;
+  const shareIdx =
+    typeof shareIdxRaw === 'number'
+      ? shareIdxRaw
+      : typeof shareIdxRaw === 'string'
+        ? Number.parseInt(shareIdxRaw, 10)
+        : undefined;
+  if (Number.isFinite(shareIdx)) {
+    const commitByIdx = commits.find((commit: any) => {
+      const commitIdxRaw = commit?.idx ?? commit?.index ?? commit?.member_idx;
+      if (typeof commitIdxRaw === 'number') {
+        return commitIdxRaw === shareIdx;
+      }
+      if (typeof commitIdxRaw === 'string') {
+        const parsed = Number.parseInt(commitIdxRaw, 10);
+        return Number.isFinite(parsed) && parsed === shareIdx;
+      }
+      return false;
+    });
+    const pubkey = extractCommitPubkey(commitByIdx);
+    if (pubkey) {
+      return pubkey;
+    }
+  }
+
+  const shareBinder = normaliseString(
+    sharePackage?.binder_sn ?? sharePackage?.binder_pn ?? sharePackage?.binder
+  );
+  if (shareBinder) {
+    const commitByBinder = commits.find((commit: any) => {
+      const binderCandidates = [commit?.binder_sn, commit?.binder_pn, commit?.binder];
+      return binderCandidates
+        .map(normaliseString)
+        .some(value => value !== undefined && value === shareBinder);
+    });
+    const pubkey = extractCommitPubkey(commitByBinder);
+    if (pubkey) {
+      return pubkey;
+    }
+  }
+
+  return undefined;
+}
+
+type PeerKeyCandidate = {
+  ping: string;
+  display: string;
+};
+
+function normalisePeerPubkey(value: unknown): PeerKeyCandidate | null {
+  if (typeof value !== 'string' || value.length === 0) {
+    return null;
+  }
+
+  try {
+    const ping = convert_pubkey(value, 'bip340');
+    const display = convert_pubkey(ping, 'ecdsa');
+    return {ping, display};
+  } catch {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+      return null;
+    }
+    return {ping: trimmed, display: trimmed};
+  }
+}
+
+function collectPeerPubkeys(groupPackage: any, selfPubkey: string): PeerKeyCandidate[] {
+  const candidates = new Map<string, PeerKeyCandidate>();
+
+  const addCandidate = (value: unknown) => {
+    const candidate = normalisePeerPubkey(value);
+    if (!candidate) {
+      return;
+    }
+    if (candidate.ping === selfPubkey) {
+      return;
+    }
+
+    if (!candidates.has(candidate.ping)) {
+      candidates.set(candidate.ping, candidate);
+    }
+  };
+
+  const commits = Array.isArray(groupPackage?.commits) ? groupPackage.commits : [];
+  commits.forEach((commit: any) => addCandidate(extractCommitPubkey(commit)));
+
+  const participants = Array.isArray(groupPackage?.participants) ? groupPackage.participants : [];
+  participants.forEach((entry: any) => {
+    if (typeof entry === 'string') {
+      addCandidate(entry);
+    } else if (entry && typeof entry === 'object') {
+      addCandidate(entry.pubkey ?? entry.pub ?? entry.public_key);
+    }
+  });
+
+  const members = Array.isArray(groupPackage?.members) ? groupPackage.members : [];
+  members.forEach((member: any) => {
+    if (typeof member === 'string') {
+      addCandidate(member);
+      return;
+    }
+
+    addCandidate(member?.pubkey ?? member?.pub ?? member?.public_key);
+  });
+
+  return Array.from(candidates.values());
+}
+
+async function checkPeerStatusCompat(
+  node: any,
+  groupCredential: string,
+  shareCredential: string
+): Promise<DiagnosticsResult['peers']> {
+  try {
+    return await checkPeerStatus(node, groupCredential, shareCredential);
+  } catch (originalError: any) {
+    try {
+      const sharePackage = decodeShare(shareCredential) as any;
+      const groupPackage = decodeGroup(groupCredential) as any;
+
+      const selfPubkeyRaw = deriveSelfPubkeyFromPackages(groupPackage, sharePackage);
+      if (!selfPubkeyRaw) {
+        throw new Error('Unable to determine signing pubkey for selected share.');
+      }
+
+      const selfPubkeyCandidate = normalisePeerPubkey(selfPubkeyRaw);
+      if (!selfPubkeyCandidate) {
+        throw new Error('Unable to normalise signing pubkey for compatibility ping.');
+      }
+
+      const peerPubkeys = collectPeerPubkeys(groupPackage, selfPubkeyCandidate.ping);
+      if (peerPubkeys.length === 0) {
+        throw new Error('No peer public keys found in the provided group credential.');
+      }
+
+      const results = await Promise.all(
+        peerPubkeys.map(async peer => {
+          const outcome = await pingPeer(node, peer.ping, {
+            timeout: DEFAULT_PING_TIMEOUT,
+            eventConfig: {enableLogging: false}
+          });
+          return {
+            pubkey: peer.display,
+            status: outcome.success ? 'online' : 'offline'
+          } as DiagnosticsResult['peers'][number];
+        })
+      );
+
+      return results;
+    } catch (fallbackError: any) {
+      const originalMessage =
+        originalError instanceof Error ? originalError.message : String(originalError ?? 'Unknown error');
+      const fallbackMessage =
+        fallbackError instanceof Error ? fallbackError.message : String(fallbackError ?? 'Unknown fallback error');
+      throw new Error(`${originalMessage} (compat fallback failed: ${fallbackMessage})`);
+    }
+  }
+}
 
 function parseRelayFlags(flags: Record<string, string | boolean>): string[] | undefined {
   const relayString =
@@ -192,7 +381,7 @@ export function KeysetStatus({flags, args}: KeysetStatusProps) {
         {enableLogging: false}
       );
 
-      const peers = await checkPeerStatus(node, share.groupCredential, shareCredential);
+      const peers = await checkPeerStatusCompat(node, share.groupCredential, shareCredential);
       setResult({relays, peers});
       setPhase('result');
     } catch (error: any) {

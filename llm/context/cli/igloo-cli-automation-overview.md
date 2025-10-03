@@ -7,3 +7,4 @@
 - The CLI persists shares as `{slug}_share_{index}.json` with payloads matching Igloo Desktop (salt + AES-GCM ciphertext).
 - Status diagnostics decrypt a saved share, spin up a transient bifrost node, and execute `checkPeerStatus` against either the default ping relays or `--relays` overrides.
 - For non-TTY environments, prompts are disabled and users are instructed to rely on the automation flags.
+- `keys convert` exposes nostr format translations (npub/nsec ↔ hex). Provide a key via shorthand flags (`--npub`, `--nsec`, `--hex-public`, `--hex-private`) or `--from`/`--value` for scripting; raw 64-character hex requires an explicit type (`--from hex-public|hex-private` or `--hex` paired with `--kind public|private`).

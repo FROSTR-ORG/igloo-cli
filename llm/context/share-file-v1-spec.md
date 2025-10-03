@@ -72,6 +72,8 @@ Additional properties MAY be present for forward compatibility.
 key = PBKDF2-SHA256(passwordBytes, saltBytes, iterations = 600000, dkLen = 32)
 ```
 
+> Igloo Desktop expands the 16-byte salt to 32 bytes (zero-padded) before passing it to PBKDF2. Igloo CLI mirrors this behaviour and also retries with the raw 16-byte salt when reading older files.
+
 ## Encryption
 
 - Cipher: AES-256-GCM

@@ -12,7 +12,7 @@ Command-line companion for the FROSTR signing stack, built with React, Ink, and 
 - [ ] Echo transfer utilities (await/send/start echo listeners).
 - [x] Policy management commands (set/update peer policies from CLI).
 - [ ] Advanced diagnostics (ping monitors, multi-round diagnostics).
-- [ ] Key conversion helpers (npub/nsec/hex transforms).
+- [x] Key conversion helpers (npub/nsec/hex transforms).
 
 ## Requirements
 
@@ -60,22 +60,41 @@ Use `igloo share load --share <filename>` if you need to decrypt one of the shar
 
 Commands below assume you linked the binary and can run `igloo`. Swap in `igloo-cli` if you prefer the original name.
 
+### Top-level commands
+
 | Command | Description |
 | --- | --- |
-| `igloo` | Show the igloo welcome screen with a frostr-themed snowflake. |
-| `igloo setup --threshold 2 --total 3` | Walk through a k-of-n bootstrap checklist. |
-| `igloo about` | Summarize the frostr architecture and sibling projects. |
-| `igloo status` | Decrypt a saved share and ping peers via default relays. |
-| `igloo signer` | Bring a decrypted share online as a signer until you quit. |
-| `igloo keyset create` | Interactive flow to generate, encrypt, and save shares. |
-| `igloo share add` | Import a single share using an existing group credential. |
-| `igloo share list` | Display encrypted shares saved on this machine. |
-| `igloo share load` | Decrypt a saved share and display it in the terminal. |
-| `igloo share signer` | Bring a decrypted share online as a signer until you quit. |
-| `igloo share status` | Connect to FROSTR relays and ping peers for a saved share. |
-| `igloo share policy` | Configure default send/receive rules and peer overrides for a share. |
+| `igloo` | Show the igloo welcome screen with the animated intro. |
+| `igloo setup --threshold 2 --total 3` | Walk through a k-of-n bootstrap checklist for fresh operators. |
+| `igloo about` | Summarize the FROSTR architecture and sibling projects. |
+| `igloo status --share vault-share-1` | Decrypt a saved share and ping peers via the default relays. |
+| `igloo signer --share vault-share-1 --password-file ./pass.txt` | Bring a decrypted share online as a signer until you quit. |
+| `igloo policy --share vault-share-1` | Configure default send/receive rules and peer overrides for a share (alias of `igloo share policy`). |
+| `igloo keyset create --name team --threshold 2 --total 3` | Interactive or flag-driven flow to generate, encrypt, and save shares. |
+| `igloo keys convert --from nsec --value nsec1example...` | Convert between npub/nsec/hex formats using `@frostr/igloo-core`. |
 
-Saved-share operations (`add`, `list`, `load`, `signer`, `status`, `policy`) all live under the `igloo share …` namespace.
+### Share namespace
+
+| Command | Description |
+| --- | --- |
+| `igloo share add --group bfgroup1... --share bfshare1...` | Import an encrypted share into local storage. |
+| `igloo share list` | Display encrypted shares saved on this machine. |
+| `igloo share load --share vault-share-1` | Decrypt a saved share and display it in the terminal. |
+| `igloo share signer --share vault-share-1 --password-file ./pass.txt` | Bring a decrypted share online as a signer until you quit. |
+| `igloo share status --share vault-share-1 --password-file ./pass.txt` | Connect to FROSTR relays and ping peers for a saved share. |
+| `igloo share policy --share vault-share-1 --allow npub1...` | Configure default send/receive rules and peer overrides for a share. |
+
+Saved-share operations (`add`, `list`, `load`, `signer`, `status`, `policy`) all live under the `igloo share …` namespace. Run `igloo share` without arguments for a concise help panel.
+
+### Key conversion helpers
+
+Use `igloo keys convert` to translate between nostr formats. Supply a key with either shorthand flags or `--from`/`--value`:
+
+- `igloo keys convert --from nsec --value nsec1example...` → prints the private hex plus derived npub/hex public key.
+- `igloo keys convert --from npub --value npub1example...` → reveals the hex public key.
+- `igloo keys convert --from hex-private --value 64hexchars` → returns the corresponding nsec and derived public keys.
+- `igloo keys convert --from hex-public --value 64hexchars` → returns the npub string.
+- Shorthand: `igloo keys --nsec nsec1example...`, `igloo keys --npub npub1example...`, or `igloo keys hex-private 64hexchars` work without specifying `convert`.
 
 Use `--help` or `--version` at any time for metadata.
 

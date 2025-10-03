@@ -13,7 +13,7 @@ import {
   buildShareId,
   SHARE_FILE_PBKDF2_ITERATIONS,
   SHARE_FILE_PASSWORD_ENCODING,
-  SHARE_FILE_SALT_LENGTH_BYTES,
+  SHARE_FILE_SALT_PBKDF2_EXPANDED_BYTES,
   SHARE_FILE_VERSION,
   createDefaultPolicy,
   ShareFileRecord
@@ -304,7 +304,7 @@ export function ShareAdd({flags, args: _args, invokedVia}: ShareAddProps) {
         salt,
         SHARE_FILE_PBKDF2_ITERATIONS,
         SHARE_FILE_PASSWORD_ENCODING,
-        SHARE_FILE_SALT_LENGTH_BYTES
+        SHARE_FILE_SALT_PBKDF2_EXPANDED_BYTES
       );
       const {cipherText} = encryptPayload(secret, shareSummary.credential);
       const name = resolvedKeysetName || 'Imported keyset';

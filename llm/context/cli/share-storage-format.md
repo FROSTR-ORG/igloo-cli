@@ -40,8 +40,9 @@
 - `SHARE_FILE_VERSION` / `SHARE_FILE_PBKDF2_ITERATIONS` constants centralise spec values.
 - `getIterationsForShareVersion(version)` chooses the correct PBKDF2 round count.
 - `deriveSecret(password, salt, iterations, encoding)` hashes the password with SHA-256 when `encoding === 'sha256'` (the default) before running PBKDF2 and returns a 32-byte hex key.
+- Writers zero-pad the 16-byte salt to 32 bytes before calling PBKDF2 so Igloo CLI and Desktop derive identical secrets. Readers retry with both 16-byte and 32-byte salt lengths for compatibility with early CLI exports.
 - `encryptPayload(secret, payload)` and `decryptPayload(secret, encoded)` wrap AES-GCM.
-- `decryptShareCredential(record, password)` iterates through password encodings (`sha256`, `raw`), PBKDF2 round counts, and salt lengths (16-byte modern, zero-padded 32-byte legacy) so both CLI- and Desktop-authored files remain readable without flagging.
+- `decryptShareCredential(record, password)` iterates through password encodings (`sha256`, `raw`), PBKDF2 round counts, IV lengths (24-byte modern, 12-byte legacy), and salt lengths (16-byte modern, zero-padded 32-byte legacy) so both CLI- and Desktop-authored files remain readable without flagging.
 - `assertShareCredentialFormat(credential)` throws if the share prefix is missing before encryption.
 
 ## Storage helpers (`src/keyset/storage.ts`)
