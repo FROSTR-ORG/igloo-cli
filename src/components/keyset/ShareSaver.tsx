@@ -74,6 +74,11 @@ export function ShareSaver({
   const share = shares[currentIndex];
   const isAutomated = typeof autoPassword === 'string' && autoPassword.length > 0;
 
+  const {status: echoStatus, message: echoMessage} = useShareEchoListener(
+    groupCredential,
+    share?.credential
+  );
+
   const shareCredentialBlock = (
     <Box marginTop={1} flexDirection="column">
       <Text color="cyanBright">Share credential</Text>
@@ -205,11 +210,6 @@ export function ShareSaver({
     void handleSave(passwordDraft);
     return undefined;
   }
-
-  const {status: echoStatus, message: echoMessage} = useShareEchoListener(
-    groupCredential,
-    share?.credential
-  );
 
   function renderEchoStatus() {
     if (!share) {

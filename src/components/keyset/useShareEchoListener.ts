@@ -62,6 +62,7 @@ export function useShareEchoListener(
   const controllerRef = useRef<ListenerController | null>(null);
   const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const warningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const fallbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const activeShareRef = useRef<string | null>(null);
   const relays = useMemo(() => {
     if (!groupCredential) {
@@ -88,6 +89,10 @@ export function useShareEchoListener(
     if (warningTimeoutRef.current) {
       clearTimeout(warningTimeoutRef.current);
       warningTimeoutRef.current = null;
+    }
+    if (fallbackTimeoutRef.current) {
+      clearTimeout(fallbackTimeoutRef.current);
+      fallbackTimeoutRef.current = null;
     }
   }, []);
 
@@ -135,8 +140,11 @@ export function useShareEchoListener(
         // Race against a fallback timer - if echo hasn't resolved after 15 seconds,
         // assume it worked (since logs show it receives messages but doesn't resolve)
         const fallbackPromise = new Promise<boolean>((resolve) => {
-          setTimeout(() => {
-            setMessage('Echo confirmation timeout - assuming successful delivery');
+          fallbackTimeoutRef.current = setTimeout(() => {
+            fallbackTimeoutRef.current = null;
+            if (!controller.cancelled) {
+              setMessage('Echo confirmation timeout - assuming successful delivery');
+            }
             resolve(true);
           }, 15000);
         });
@@ -145,6 +153,11 @@ export function useShareEchoListener(
 
         if (controller.cancelled) {
           return;
+        }
+
+        if (fallbackTimeoutRef.current) {
+          clearTimeout(fallbackTimeoutRef.current);
+          fallbackTimeoutRef.current = null;
         }
 
         setStatus('success');
@@ -172,6 +185,10 @@ export function useShareEchoListener(
           setTrigger(current => current + 1);
         }, backoffDelay);
       } finally {
+        if (fallbackTimeoutRef.current) {
+          clearTimeout(fallbackTimeoutRef.current);
+          fallbackTimeoutRef.current = null;
+        }
         if (warningTimeoutRef.current) {
           clearTimeout(warningTimeoutRef.current);
           warningTimeoutRef.current = null;
