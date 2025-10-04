@@ -1,4 +1,4 @@
-import React, {useEffect, useMemo, useState} from 'react';
+import React, {useEffect, useMemo, useRef, useState} from 'react';
 import {Box, Text} from 'ink';
 import {promises as fs} from 'node:fs';
 import {decodeGroup, decodeShare} from '@frostr/igloo-core';
@@ -16,7 +16,8 @@ import {
   SHARE_FILE_SALT_PBKDF2_EXPANDED_BYTES,
   SHARE_FILE_VERSION,
   createDefaultPolicy,
-  ShareFileRecord
+  ShareFileRecord,
+  sendShareEcho
 } from '../../keyset/index.js';
 import {Prompt} from '../ui/Prompt.js';
 import {ShareNamespaceFrame, ShareInvocationHint} from './ShareNamespaceFrame.js';
@@ -80,11 +81,21 @@ export function ShareAdd({flags, args: _args, invokedVia}: ShareAddProps) {
   );
   const [feedback, setFeedback] = useState<string | null>(null);
   const [savedPath, setSavedPath] = useState<string | null>(null);
+  const [echoStatus, setEchoStatus] = useState<'idle' | 'pending' | 'success' | 'error'>('idle');
+  const [echoError, setEchoError] = useState<string | null>(null);
 
   const groupFlag = typeof flags.group === 'string' ? flags.group.trim() : undefined;
   const shareFlag = typeof flags.share === 'string' ? flags.share.trim() : undefined;
   const nameFlag = typeof flags.name === 'string' ? flags.name : undefined;
   const outputDir = typeof flags.output === 'string' ? flags.output : undefined;
+
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -295,6 +306,8 @@ export function ShareAdd({flags, args: _args, invokedVia}: ShareAddProps) {
     setMode('saving');
     const now = new Date().toISOString();
     try {
+      setEchoStatus('idle');
+      setEchoError(null);
       if (password.length < 8) {
         throw new Error('Password must be at least 8 characters.');
       }
@@ -338,7 +351,23 @@ export function ShareAdd({flags, args: _args, invokedVia}: ShareAddProps) {
       setShares(refreshed);
       setSavedPath(filepath);
       setFeedback('Share imported successfully.');
+      setEchoStatus('pending');
       setMode('done');
+      void (async () => {
+        try {
+          await sendShareEcho(groupSummary.credential, shareSummary.credential);
+          if (!isMountedRef.current) {
+            return;
+          }
+          setEchoStatus('success');
+        } catch (error: any) {
+          if (!isMountedRef.current) {
+            return;
+          }
+          setEchoStatus('error');
+          setEchoError(error?.message ?? 'Failed to send echo confirmation.');
+        }
+      })();
     } catch (error: any) {
       setFeedback(error?.message ?? 'Failed to save share.');
       setMode('password');
@@ -498,6 +527,17 @@ export function ShareAdd({flags, args: _args, invokedVia}: ShareAddProps) {
             <Text color="gray">Run `igloo share list` to confirm the updated inventory.</Text>
           </Box>
           {feedback ? <Text color="green">{feedback}</Text> : null}
+          {echoStatus === 'pending' ? (
+            <Text color="cyan">Sending echo confirmation…</Text>
+          ) : null}
+          {echoStatus === 'success' ? (
+            <Text color="green">Echo confirmation sent to the originating device.</Text>
+          ) : null}
+          {echoStatus === 'error' ? (
+            <Text color="yellow">
+              Failed to send echo confirmation{echoError ? `: ${echoError}` : '.'}
+            </Text>
+          ) : null}
         </Box>
       </ShareFrame>
     );
