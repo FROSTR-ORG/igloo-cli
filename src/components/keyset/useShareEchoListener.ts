@@ -64,6 +64,7 @@ export function useShareEchoListener(
   const warningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const fallbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const activeShareRef = useRef<string | null>(null);
+  const fallbackTriggeredRef = useRef(false);
   const relays = useMemo(() => {
     if (!groupCredential) {
       return undefined;
@@ -109,6 +110,7 @@ export function useShareEchoListener(
     const controller: ListenerController = {cancelled: false};
     controllerRef.current = controller;
     setStatus('listening');
+    fallbackTriggeredRef.current = false;
 
     if (activeShareRef.current !== shareCredential) {
       setMessage(null);
@@ -143,6 +145,7 @@ export function useShareEchoListener(
           fallbackTimeoutRef.current = setTimeout(() => {
             fallbackTimeoutRef.current = null;
             if (!controller.cancelled) {
+              fallbackTriggeredRef.current = true;
               setMessage('Echo confirmation timeout - assuming successful delivery');
             }
             resolve(true);
@@ -161,7 +164,11 @@ export function useShareEchoListener(
         }
 
         setStatus('success');
-        setMessage(null);
+        if (fallbackTriggeredRef.current) {
+          fallbackTriggeredRef.current = false;
+        } else {
+          setMessage(null);
+        }
         retryCountRef.current = 0;
       } catch (err: any) {
         if (controller.cancelled) {
@@ -189,6 +196,7 @@ export function useShareEchoListener(
           clearTimeout(fallbackTimeoutRef.current);
           fallbackTimeoutRef.current = null;
         }
+        fallbackTriggeredRef.current = false;
         if (warningTimeoutRef.current) {
           clearTimeout(warningTimeoutRef.current);
           warningTimeoutRef.current = null;
