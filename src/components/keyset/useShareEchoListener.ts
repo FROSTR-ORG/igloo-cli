@@ -221,6 +221,7 @@ export function useShareEchoListener(
     retryDelayMs,
     warningAfterMs,
     maxRetries,
+    maxBackoffMs,
     relays
   ]);
 
