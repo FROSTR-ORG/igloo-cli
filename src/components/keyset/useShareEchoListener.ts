@@ -21,6 +21,10 @@ export type UseShareEchoListenerOptions = {
    * Maximum number of retry attempts before giving up.
    */
   maxRetries?: number;
+  /**
+   * Cap for the exponential retry backoff.
+   */
+  maxBackoffMs?: number;
 };
 
 type ListenerController = {cancelled: boolean};
@@ -48,7 +52,8 @@ export function useShareEchoListener(
     timeoutMs = 5 * 60_000,
     retryDelayMs = 5_000,
     warningAfterMs = 60_000,
-    maxRetries = 5
+    maxRetries = 5,
+    maxBackoffMs = 2 * 60_000
   }: UseShareEchoListenerOptions = {}
 ): {
   status: EchoStatus;
@@ -185,12 +190,17 @@ export function useShareEchoListener(
         setStatus('listening');
         setMessage(reason);
 
-        const backoffDelay = retryDelayMs * (2 ** retryCountRef.current);
-        retryCountRef.current++;
+        const exponentialDelay = retryDelayMs * (2 ** retryCountRef.current);
+        const backoffDelay = Math.min(exponentialDelay, maxBackoffMs);
+        if (retryTimeoutRef.current) {
+          clearTimeout(retryTimeoutRef.current);
+          retryTimeoutRef.current = null;
+        }
         retryTimeoutRef.current = setTimeout(() => {
           retryTimeoutRef.current = null;
           setTrigger(current => current + 1);
         }, backoffDelay);
+        retryCountRef.current++;
       } finally {
         if (fallbackTimeoutRef.current) {
           clearTimeout(fallbackTimeoutRef.current);
