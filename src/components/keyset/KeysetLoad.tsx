@@ -3,6 +3,7 @@ import {Box, Text} from 'ink';
 import {decodeGroup, decodeShare} from '@frostr/igloo-core';
 import {readShareFiles, decryptShareCredential, ShareMetadata} from '../../keyset/index.js';
 import {Prompt} from '../ui/Prompt.js';
+import {useShareEchoListener} from './useShareEchoListener.js';
 
 type KeysetLoadProps = {
   args: string[];
@@ -58,6 +59,13 @@ export function KeysetLoad({args}: KeysetLoadProps) {
       setPhase('password');
     }
   }, [attemptPreselect, selectedShare]);
+
+  const decryptedShare = result?.share ?? null;
+  const decryptedGroup = result?.group ?? null;
+  const {status: echoStatus, message: echoMessage} = useShareEchoListener(
+    decryptedGroup,
+    decryptedShare
+  );
 
   if (state.loading) {
     return (
@@ -211,6 +219,19 @@ export function KeysetLoad({args}: KeysetLoadProps) {
           ) : null}
         </Box>
       ) : null}
+      <Box marginTop={1} flexDirection="column">
+        {echoStatus === 'listening' ? (
+          <Box flexDirection="column">
+          <Text color="cyan">
+            Waiting for echo confirmation{shareIndex !== undefined ? ` on share ${shareIndex}` : ''}…
+          </Text>
+            {echoMessage ? <Text color="yellow">{echoMessage}</Text> : null}
+          </Box>
+        ) : null}
+        {echoStatus === 'success' ? (
+          <Text color="green">Echo confirmed by the receiving device.</Text>
+        ) : null}
+      </Box>
     </Box>
   );
 }

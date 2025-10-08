@@ -15,6 +15,7 @@ import {
   createDefaultPolicy
 } from '../../keyset/index.js';
 import {Prompt} from '../ui/Prompt.js';
+import {useShareEchoListener} from './useShareEchoListener.js';
 
 type ShareSaverProps = {
   keysetName: string;
@@ -72,6 +73,25 @@ export function ShareSaver({
 
   const share = shares[currentIndex];
   const isAutomated = typeof autoPassword === 'string' && autoPassword.length > 0;
+
+  const {status: echoStatus, message: echoMessage} = useShareEchoListener(
+    groupCredential,
+    share?.credential
+  );
+
+  const shareCredentialBlock = (
+    <Box marginTop={1} flexDirection="column">
+      <Text color="cyanBright">Share credential</Text>
+      <Text color="white">{share?.credential ?? 'unknown'}</Text>
+    </Box>
+  );
+
+  const groupCredentialBlock = (
+    <Box marginTop={1} flexDirection="column">
+      <Text color="magentaBright">Group credential</Text>
+      <Text color="white">{groupCredential}</Text>
+    </Box>
+  );
 
   const summaryView = (
     <Box flexDirection="column">
@@ -191,6 +211,30 @@ export function ShareSaver({
     return undefined;
   }
 
+  function renderEchoStatus() {
+    if (!share) {
+      return null;
+    }
+    if (echoStatus === 'listening') {
+      return (
+        <Box flexDirection="column">
+          <Text color="cyan">
+            Waiting for echo confirmation on share {share.index}…
+          </Text>
+          {echoMessage ? <Text color="yellow">{echoMessage}</Text> : null}
+        </Box>
+      );
+    }
+    if (echoStatus === 'success') {
+      return (
+        <Box flexDirection="column" marginTop={1} marginBottom={1}>
+          <Text color="green" bold>✓ Echo confirmed! Receiving device got the share.</Text>
+        </Box>
+      );
+    }
+    return null;
+  }
+
   if (isAutomated) {
     if (autoState === 'idle') {
       if (!autoPassword || autoPassword.length < 8) {
@@ -270,6 +314,9 @@ export function ShareSaver({
     return (
       <Box flexDirection="column">
         <Text color="cyan">Encrypting share {share.index}…</Text>
+        {shareCredentialBlock}
+        {groupCredentialBlock}
+        {renderEchoStatus()}
       </Box>
     );
   }
@@ -279,6 +326,9 @@ export function ShareSaver({
       <Box flexDirection="column">
         <Text color="green">Share {share.index} saved.</Text>
         {feedback ? <Text color="gray">{feedback}</Text> : null}
+        {shareCredentialBlock}
+        {groupCredentialBlock}
+        {renderEchoStatus()}
         <Prompt
           key={`continue-${share.index}`}
           label="Press Enter to continue"
@@ -295,7 +345,9 @@ export function ShareSaver({
   return (
     <Box flexDirection="column">
       <Text color="cyan">Share {share.index} of {shareCredentials.length}</Text>
-      <Text color="gray">{share.credential}</Text>
+      {shareCredentialBlock}
+      {groupCredentialBlock}
+      {renderEchoStatus()}
       <Text>
         Set a password to encrypt this share. Leave blank to skip saving and handle it manually.
       </Text>
