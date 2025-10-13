@@ -1,5 +1,12 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {awaitShareEcho, decodeGroup, createAndConnectNode, cleanupBifrostNode} from '@frostr/igloo-core';
+import {
+  awaitShareEcho,
+  decodeGroup,
+  createAndConnectNode,
+  cleanupBifrostNode,
+  DEFAULT_ECHO_RELAYS
+} from '@frostr/igloo-core';
+import {resolveRelaysWithFallbackSync} from '../../keyset/relays.js';
 
 export type EchoStatus = 'idle' | 'listening' | 'success';
 
@@ -76,11 +83,14 @@ export function useShareEchoListener(
     }
     try {
       const decoded = decodeGroup(groupCredential);
-      return extractRelays(decoded);
+      const fromGroup = extractRelays(decoded);
+      if (fromGroup && fromGroup.length > 0) return fromGroup;
+      // fall back to configured relays, or DEFAULT_ECHO_RELAYS
+      return resolveRelaysWithFallbackSync(undefined, DEFAULT_ECHO_RELAYS);
     } catch {
       // ignore decode failures; we'll fall back to default relays
     }
-    return undefined;
+    return resolveRelaysWithFallbackSync(undefined, DEFAULT_ECHO_RELAYS);
   }, [groupCredential]);
 
   const clearPending = useCallback(() => {

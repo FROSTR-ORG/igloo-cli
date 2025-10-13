@@ -2,6 +2,10 @@ import os from 'node:os';
 import path from 'node:path';
 
 export function getAppDataPath(): string {
+  const override = process.env.IGLOO_APPDATA;
+  if (override && override.length > 0) {
+    return override;
+  }
   const platform = os.platform();
 
   if (platform === 'win32') {

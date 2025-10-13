@@ -13,6 +13,7 @@ import {ShareLoad} from './components/share/ShareLoad.js';
 import {ShareStatus} from './components/share/ShareStatus.js';
 import {ShareSigner} from './components/share/ShareSigner.js';
 import {ShareAdd} from './components/share/ShareAdd.js';
+import {Relays} from './components/relays/Relays.js';
 
 type AppProps = {
   command: string;
@@ -131,6 +132,8 @@ export function App({command, args, flags, version}: AppProps) {
       return <Setup threshold={threshold} total={total} />;
     case 'about':
       return <About />;
+    case 'relays':
+      return <Relays flags={flags} args={args} />;
     case 'status':
       return <ShareStatus flags={flags} args={args} />;
     case 'signer':

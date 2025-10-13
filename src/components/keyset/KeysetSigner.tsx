@@ -10,7 +10,6 @@ import fs from 'node:fs/promises';
 import {
   createAndConnectNode,
   cleanupBifrostNode,
-  DEFAULT_PING_RELAYS,
   decodeGroup,
   decodeShare,
   extractSelfPubkeyFromCredentials,
@@ -25,6 +24,7 @@ import {
   decryptShareCredential,
   ShareMetadata
 } from '../../keyset/index.js';
+import {resolveRelaysWithFallbackSync, DEFAULT_SIGNER_RELAYS} from '../../keyset/relays.js';
 
 export type KeysetSignerProps = {
   args: string[];
@@ -64,6 +64,7 @@ type LogEntry = {
 };
 
 const LOG_LEVELS: LogLevel[] = ['debug', 'info', 'warn', 'error'];
+
 
 function parseBooleanFlag(value: string | boolean | undefined): boolean {
   if (typeof value === 'boolean') {
@@ -248,7 +249,7 @@ export function KeysetSigner({args, flags}: KeysetSignerProps) {
 
   const shareToken = typeof flags.share === 'string' ? flags.share : args[0];
   const relayOverrides = parseRelayFlags(flags);
-  const relays = relayOverrides && relayOverrides.length > 0 ? relayOverrides : DEFAULT_PING_RELAYS;
+  const relays = resolveRelaysWithFallbackSync(relayOverrides, DEFAULT_SIGNER_RELAYS);
 
   const nodeRef = useRef<BifrostNode | null>(null);
   const peerManagerRef = useRef<PeerManager | null>(null);

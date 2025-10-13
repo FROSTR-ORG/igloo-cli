@@ -69,6 +69,8 @@ Commands below assume you linked the binary and can run `igloo`. Swap in `igloo-
 | `igloo about` | Summarize the FROSTR architecture and sibling projects. |
 | `igloo status --share vault-share-1` | Decrypt a saved share and ping peers via the default relays. |
 | `igloo signer --share vault-share-1 --password-file ./pass.txt` | Bring a decrypted share online as a signer until you quit. |
+| `igloo relays` | Show effective and configured default relays. |
+| `igloo relays set wss://a wss://b` | Set the default relays for status/signer. |
 | `igloo policy --share vault-share-1` | Configure default send/receive rules and peer overrides for a share (alias of `igloo share policy`). |
 | `igloo keyset create --name team --threshold 2 --total 3` | Interactive or flag-driven flow to generate, encrypt, and save shares. |
 | `igloo keys convert --from nsec --value nsec1example...` | Convert between npub/nsec/hex formats using `@frostr/igloo-core`. |
@@ -106,6 +108,7 @@ Keyset commands and the signer flow support non-interactive execution:
 - `--output ./directory` — change where encrypted share JSON is written.
 - `--share id` — target a saved share by id/name when loading, diagnosing, or running the signer.
 - `--relays wss://relay1,wss://relay2` — override the relay list for status checks and the signer.
+  Configure persistent defaults via `igloo relays set …`.
 - `--verbose` — stream signer diagnostics (toggleable at runtime with the `l` key).
 - `--log-level level` — pick signer log verbosity (`debug`, `info`, `warn`, or `error`).
 
