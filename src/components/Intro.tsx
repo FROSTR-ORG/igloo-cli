@@ -17,14 +17,14 @@ export function Intro({version, commandExamples}: IntroProps) {
 
       <Box marginTop={1} flexDirection="column">
         <Text color="cyan">Core commands</Text>
-        <Text>- igloo-cli setup          -- bootstrap a fresh keyset</Text>
-        <Text>- igloo-cli keyset create  -- generate & encrypt shares headlessly</Text>
-        <Text>- igloo-cli share add      -- import a share using its group</Text>
-        <Text>- igloo-cli share list     -- review saved shares on this device</Text>
-        <Text>- igloo-cli share status   -- check relay and peer reachability</Text>
-        <Text>- igloo-cli share policy   -- tune defaults and peer overrides</Text>
-        <Text>- igloo-cli keys convert   -- translate between npub/nsec/hex</Text>
-        <Text>- igloo-cli signer         -- bring a share online as a signer</Text>
+        <Text>- igloo-cli setup    -- bootstrap a fresh keyset</Text>
+        <Text>- igloo-cli keyset   -- create keysets and shares</Text>
+        <Text>- igloo-cli share    -- manage saved shares</Text>
+        <Text>- igloo-cli signer   -- bring a share online as a signer</Text>
+        <Text>- igloo-cli status   -- check relay and peer reachability</Text>
+        <Text>- igloo-cli keys     -- translate between npub/nsec/hex</Text>
+        <Text>- igloo-cli relays   -- manage default relay endpoints</Text>
+        <Text>- igloo-cli about    -- outline the FROSTR stack</Text>
       </Box>
 
       <Box marginTop={1} flexDirection="column">

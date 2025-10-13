@@ -14,6 +14,7 @@ import {
 import {convert_pubkey} from '@frostr/bifrost/util';
 import {readShareFiles, decryptShareCredential, ShareMetadata} from '../../keyset/index.js';
 import {Prompt} from '../ui/Prompt.js';
+import {resolveRelaysWithFallbackSync} from '../../keyset/relays.js';
 
 export type KeysetStatusProps = {
   flags: Record<string, string | boolean>;
@@ -272,7 +273,7 @@ export function KeysetStatus({flags, args}: KeysetStatusProps) {
 
   const shareToken = typeof flags.share === 'string' ? flags.share : args[0];
   const relayOverrides = parseRelayFlags(flags);
-  const relays = relayOverrides && relayOverrides.length > 0 ? relayOverrides : DEFAULT_PING_RELAYS;
+  const relays = resolveRelaysWithFallbackSync(relayOverrides, DEFAULT_PING_RELAYS);
 
   useEffect(() => {
     void (async () => {

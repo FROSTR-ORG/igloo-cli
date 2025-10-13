@@ -106,7 +106,19 @@ if (shouldShowVersion) {
 }
 
 if (showHelp) {
-  showHelpScreen(packageJson.version);
+  const helpable = new Set(['share', 'keyset', 'keys', 'relays']);
+  if (helpable.has((command ?? '').toLowerCase())) {
+    render(
+      <App
+        command={command}
+        args={args}
+        flags={flags}
+        version={packageJson.version}
+      />
+    );
+  } else {
+    showHelpScreen(packageJson.version);
+  }
 } else {
   render(
     <App
