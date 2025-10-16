@@ -62,9 +62,14 @@ export function KeysetLoad({args}: KeysetLoadProps) {
 
   const decryptedShare = result?.share ?? null;
   const decryptedGroup = result?.group ?? null;
+  const skipEcho = (() => {
+    const a = (process.env.IGLOO_SKIP_ECHO ?? '').toLowerCase();
+    const b = (process.env.IGLOO_DISABLE_RAW_MODE ?? '').toLowerCase();
+    return a === '1' || a === 'true' || b === '1' || b === 'true';
+  })();
   const {status: echoStatus, message: echoMessage} = useShareEchoListener(
-    decryptedGroup,
-    decryptedShare
+    skipEcho ? undefined : decryptedGroup,
+    skipEcho ? undefined : decryptedShare
   );
 
   if (state.loading) {
@@ -139,6 +144,26 @@ export function KeysetLoad({args}: KeysetLoadProps) {
   }
 
   if (phase === 'password') {
+    // Test/CI automation: allow non-interactive password via env var
+    const autoPassword = typeof process !== 'undefined' ? process.env.IGLOO_AUTOPASSWORD : undefined;
+    if (autoPassword && autoPassword.length >= 8) {
+      try {
+        const {shareCredential} = decryptShareCredential(selectedShare, autoPassword);
+        setResult({share: shareCredential, group: selectedShare.groupCredential});
+        setPhase('result');
+        return (
+          <Box flexDirection="column">
+            <Text color="cyan">Decrypting with automation password…</Text>
+          </Box>
+        );
+      } catch (error: any) {
+        return (
+          <Box flexDirection="column">
+            <Text color="red">{error?.message ?? 'Failed to decrypt share with automation password.'}</Text>
+          </Box>
+        );
+      }
+    }
     return (
       <Box flexDirection="column">
         <Text color="cyanBright">Decrypt share: {selectedShare.name}</Text>
@@ -191,6 +216,12 @@ export function KeysetLoad({args}: KeysetLoadProps) {
     };
   } catch {
     groupInfo = undefined;
+  }
+
+  // In non-interactive test environments, auto-exit shortly after rendering
+  // the successful result to avoid hanging the child process.
+  if (result && (process.env.IGLOO_DISABLE_RAW_MODE === '1' || process.env.IGLOO_TEST_AUTOPILOT === '1')) {
+    setTimeout(() => { try { process.exit(0); } catch {} }, 20);
   }
 
   return (

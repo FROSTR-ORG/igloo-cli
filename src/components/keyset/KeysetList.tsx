@@ -17,6 +17,14 @@ export function KeysetList() {
     shares: []
   });
 
+  // In non-interactive environments (tests/CI), auto-exit once we've rendered
+  // a final state so spawn-based harnesses don't hang waiting for Ink to idle.
+  const nonInteractive = (() => {
+    const a = (process.env.IGLOO_DISABLE_RAW_MODE ?? '').toLowerCase();
+    const b = (process.env.IGLOO_TEST_AUTOPILOT ?? '').toLowerCase();
+    return a === '1' || a === 'true' || b === '1' || b === 'true';
+  })();
+
   useEffect(() => {
     void (async () => {
       try {
@@ -35,6 +43,14 @@ export function KeysetList() {
       }
     })();
   }, []);
+
+  useEffect(() => {
+    if (!nonInteractive || state.loading) return;
+    const t = setTimeout(() => {
+      try { process.exit(0); } catch {}
+    }, 10);
+    return () => clearTimeout(t);
+  }, [nonInteractive, state.loading, state.shares.length, state.error]);
 
   if (state.loading) {
     return (
