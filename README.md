@@ -16,15 +16,27 @@ Command-line companion for the FROSTR signing stack, built with React, Ink, and 
 
 ## Requirements
 
-- Node.js 18 or newer
-- npm 10 or newer (bundled with Node 20+)
+- Node.js 18+ (primary target, default scripts)
+- Bun 1.0+ (optional; faster dev/build/test)
+- npm 10+ (bundled with Node 20+)
 
 ## First run
+
+Using Node (default):
 
 ```bash
 npm install
 npm run build
 npm link
+igloo --help
+```
+
+Using Bun (optional, faster):
+
+```bash
+bun install
+bun run build:bun
+bun link
 igloo --help
 ```
 
@@ -145,9 +157,17 @@ Use either `igloo status` or `igloo share status` to decrypt a saved share, conn
 
 ## Development scripts
 
-- `npm run dev` — run the CLI via `tsx` without bundling.
-- `npm run build` — bundle to `dist/cli.js` with `tsup`.
-- `npm run typecheck` — validate TypeScript types.
+- Node (default)
+  - `npm run dev` — run the CLI via `tsx` without bundling.
+  - `npm run build` — bundle to `dist/cli.js` with `tsup`.
+  - `npm run typecheck` — validate TypeScript types.
+  - `npm run test` — typecheck then run tests via `tsx --test`.
+- Bun (optional, faster)
+  - `bun run dev:bun` — use bunx + tsx for live dev.
+  - `bun run build:bun` — use bunx + tsup for bundling.
+  - `bun run typecheck:bun` — run TypeScript via bunx.
+  - `bun run test:bun` — run typecheck and tests via bunx.
+  - `bun run start:bun` — run the bundled CLI with Bun.
 
 ## Project layout
 

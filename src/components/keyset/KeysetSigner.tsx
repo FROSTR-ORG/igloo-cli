@@ -621,6 +621,12 @@ export function KeysetSigner({args, flags}: KeysetSignerProps) {
     })();
   }, [automationReady, selectedShare, automationPassword, startSigner]);
 
+  const inputDisabled = (() => {
+    const a = (process.env.IGLOO_DISABLE_RAW_MODE ?? '').toLowerCase();
+    const b = (process.env.IGLOO_CLI_NO_INPUT ?? '').toLowerCase();
+    return a === '1' || a === 'true' || b === '1' || b === 'true';
+  })();
+
   useInput((input, key) => {
     if (phase !== 'running') {
       return;
@@ -634,7 +640,7 @@ export function KeysetSigner({args, flags}: KeysetSignerProps) {
     if (input?.toLowerCase() === 'q' || key.escape) {
       stopSigner('Signer stopped by user.');
     }
-  });
+  }, {isActive: !inputDisabled && phase === 'running'});
 
   if (loadState.loading || passwordLoading) {
     return (

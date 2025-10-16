@@ -78,6 +78,10 @@ export function useShareEchoListener(
   const activeShareRef = useRef<string | null>(null);
   const fallbackTriggeredRef = useRef(false);
   const relays = useMemo(() => {
+    const envOverride = typeof process !== 'undefined' ? process.env.IGLOO_TEST_RELAY : undefined;
+    if (envOverride && envOverride.length > 0) {
+      return [envOverride];
+    }
     if (!groupCredential) {
       return undefined;
     }
