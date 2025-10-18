@@ -10,7 +10,15 @@ export type RunCliOptions = {
   successPattern?: RegExp;
 };
 
-export async function runCli(args: string[] = [], options: RunCliOptions = {}) {
+export type RunCliResult = {
+  exitCode: number;
+  signal: NodeJS.Signals | null;
+  timedOut: boolean;
+  stdout: string;
+  stderr: string;
+};
+
+export async function runCli(args: string[] = [], options: RunCliOptions = {}): Promise<RunCliResult> {
   const cwd = options.cwd ?? process.cwd();
   const bin = path.join(cwd, 'dist', 'cli.js');
   const nodeBin = process.env.NODE_BINARY && process.env.NODE_BINARY.length > 0
@@ -35,8 +43,9 @@ export async function runCli(args: string[] = [], options: RunCliOptions = {}) {
     if (options.successPattern) {
       const current = Buffer.concat(stdoutChunks).toString('utf8');
       if (options.successPattern.test(current)) {
-        // Give the process a moment to flush, then terminate
-        setTimeout(() => child.kill('SIGTERM'), 50);
+        // Give the process a moment to flush and finish any side effects
+        // (e.g., sending an echo event) before terminating.
+        setTimeout(() => child.kill('SIGTERM'), 150);
       }
     }
   });
@@ -54,14 +63,18 @@ export async function runCli(args: string[] = [], options: RunCliOptions = {}) {
     child.stdin.end();
   }
 
-  const exitCode: number = await new Promise((resolve) => {
-    child.on('exit', (code) => resolve(code ?? 0));
+  const { exitCode, signal } = await new Promise<{ exitCode: number; signal: NodeJS.Signals | null }>((resolve) => {
+    child.on('exit', (code, signal) => {
+      const exitCode = (code ?? (signal ? 128 : 0));
+      resolve({ exitCode, signal });
+    });
   });
 
   clearTimeout(timer);
 
   return {
     exitCode,
+    signal,
     timedOut,
     stdout: Buffer.concat(stdoutChunks).toString('utf8'),
     stderr: Buffer.concat(stderrChunks).toString('utf8')

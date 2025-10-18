@@ -54,7 +54,7 @@ test('share add (automated) saves file and share list shows it; share load decry
     '--output', outDir
   ], {
     timeoutMs: 25000,
-    env: { IGLOO_SKIP_ECHO: '1', IGLOO_TEST_AUTOPILOT: '1' },
+    env: { IGLOO_TEST_AUTOPILOT: '1' },
     successPattern: /Share saved\./
   });
   assert.match(resAdd.stdout, /Share saved\./);
@@ -80,5 +80,5 @@ test('share add (automated) saves file and share list shows it; share load decry
   assert.match(resLoad.stdout, /Share decrypted successfully/);
 
   // Ensure our relay saw at least one EVENT (echo attempts)
-  assert.ok(relay.events.length >= 0);
+  assert.ok(relay.events.length > 0);
 });

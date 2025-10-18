@@ -316,6 +316,11 @@ Echo functionality enables QR code transfers and confirmation that shares have b
 
 Waits for an echo event on a specific share.
 
+Note: Since igloo-core 0.2.4, the listener accepts both legacy echo requests
+with `data === 'echo'` and newer challenge-based requests where `data` is an
+even-length hex string. No changes are required on the sender side when
+upgrading.
+
 ```typescript
 import { awaitShareEcho } from '@frostr/igloo-core';
 

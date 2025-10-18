@@ -218,14 +218,31 @@ export function ShareAdd({flags, args: _args, invokedVia}: ShareAddProps) {
           } catch {}
           setSavedPath(filepath);
           setFeedback('Share imported successfully.');
+          // Prepare echo in autopilot as a fire-and-forget to allow tests
+          // to observe at least one EVENT on the ephemeral relay.
+          const skipEcho = ((process.env.IGLOO_SKIP_ECHO ?? '').toLowerCase());
+          const shouldEcho = !(skipEcho === '1' || skipEcho === 'true');
+          if (shouldEcho && groupFlag && shareFlag) {
+            try {
+              // Do not await; start immediately so it can complete before
+              // the test harness terminates the process after seeing output.
+              void sendShareEcho(groupFlag, shareFlag).catch((err: any) => {
+                const msg = err?.message ?? String(err ?? '');
+                // eslint-disable-next-line no-console
+                try { console.warn('[igloo-cli] Echo send error (autopilot):', msg); } catch {}
+              });
+              setEchoStatus('pending');
+            } catch {
+              // ignore; UI feedback handled below
+            }
+          } else {
+            setEchoStatus('success');
+          }
           // Emit a plain log line directly to stdout so automated tests can
           // detect completion even when Ink rendering is suppressed.
           try { process.stdout.write('Share saved.\n'); } catch {}
           try { await new Promise(res => setTimeout(res, 10)); } catch {}
           setMode('done');
-          // Skip echo under tests (IGLOO_SKIP_ECHO handled elsewhere)
-          const skipEcho = ((process.env.IGLOO_SKIP_ECHO ?? '').toLowerCase());
-          setEchoStatus(skipEcho === '1' || skipEcho === 'true' ? 'success' : 'pending');
           // Do not exit immediately here; allow the UI to render the
           // success screen so tests can detect "Share saved." reliably.
         })();

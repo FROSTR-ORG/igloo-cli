@@ -64,8 +64,7 @@ export function KeysetLoad({args}: KeysetLoadProps) {
   const decryptedGroup = result?.group ?? null;
   const skipEcho = (() => {
     const a = (process.env.IGLOO_SKIP_ECHO ?? '').toLowerCase();
-    const b = (process.env.IGLOO_DISABLE_RAW_MODE ?? '').toLowerCase();
-    return a === '1' || a === 'true' || b === '1' || b === 'true';
+    return a === '1' || a === 'true';
   })();
   const {status: echoStatus, message: echoMessage} = useShareEchoListener(
     skipEcho ? undefined : decryptedGroup,

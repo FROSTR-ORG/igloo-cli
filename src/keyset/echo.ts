@@ -1,5 +1,8 @@
 import {randomBytes} from 'node:crypto';
-import {sendEcho, DEFAULT_ECHO_RELAYS, type NodeEventConfig} from '@frostr/igloo-core';
+import {sendEcho, type NodeEventConfig} from '@frostr/igloo-core';
+
+// Simple echo wrapper using igloo-core >= 0.2.4. The library now handles
+// both legacy and challenge formats on the listener side.
 
 export type SendShareEchoOptions = {
   relays?: string[];
@@ -23,17 +26,14 @@ export async function sendShareEcho(
   }
   // Generate random challenge if not provided (32 bytes = 64 hex chars)
   const finalChallenge = challenge ?? randomBytes(32).toString('hex');
-
-  // sendEcho in v0.2.1: sendEcho(groupCredential: string, shareCredential: string, challenge: string, options?: { relays?: string[]; timeout?: number; eventConfig?: NodeEventConfig; })
-  const override = typeof process !== 'undefined' ? process.env.IGLOO_TEST_RELAY : undefined;
-  const resolvedRelays = override && override.length > 0 ? [override] : (relays ?? DEFAULT_ECHO_RELAYS);
+  const envRelay = (process.env.IGLOO_TEST_RELAY ?? '').trim();
+  const normalize = (u: string) => (/^wss?:\/\//i.test(u) ? u.replace(/^http/i, 'ws') : `wss://${u}`);
+  const explicitRelays = Array.isArray(relays) && relays.length > 0 ? relays.map(normalize) : undefined;
+  const overrideRelays = envRelay ? [normalize(envRelay)] : undefined;
 
   await sendEcho(groupCredential, shareCredential, finalChallenge, {
-    relays: resolvedRelays,
+    relays: explicitRelays ?? overrideRelays, // let igloo-core resolve group/defaults otherwise
     timeout,
-    eventConfig: {
-      enableLogging: false,
-      ...eventConfig
-    }
+    eventConfig: { enableLogging: false, ...eventConfig }
   });
 }

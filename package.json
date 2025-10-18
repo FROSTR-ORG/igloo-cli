@@ -28,7 +28,7 @@
   "homepage": "https://github.com/FROSTR-ORG/igloo-cli#readme",
   "dependencies": {
     "@frostr/bifrost": "^1.0.7",
-    "@frostr/igloo-core": "^0.2.3",
+    "@frostr/igloo-core": "^0.2.4",
     "@noble/ciphers": "^2.0.1",
     "@noble/curves": "^2.0.1",
     "@noble/hashes": "^2.0.1",
@@ -54,5 +54,8 @@
   "files": [
     "dist"
   ],
-  "type": "module"
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  }
 }
