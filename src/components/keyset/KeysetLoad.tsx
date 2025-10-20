@@ -22,6 +22,8 @@ export function KeysetLoad({args}: KeysetLoadProps) {
   const [phase, setPhase] = useState<Phase>('select');
   const [selectedShare, setSelectedShare] = useState<ShareMetadata | null>(null);
   const [result, setResult] = useState<{share: string; group: string} | null>(null);
+  const [autoDecrypting, setAutoDecrypting] = useState<boolean>(false);
+  const [autoError, setAutoError] = useState<string | null>(null);
 
   useEffect(() => {
     void (async () => {
@@ -60,11 +62,77 @@ export function KeysetLoad({args}: KeysetLoadProps) {
     }
   }, [attemptPreselect, selectedShare]);
 
+  // Clear any previous automation error when the user changes share selection.
+  useEffect(() => {
+    setAutoError(null);
+  }, [selectedShare]);
+
+  // Attempt non-interactive decryption when we reach password phase and a valid
+  // IGLOO_AUTOPASSWORD is present. Runs outside render and guards against
+  // updates after unmount via a cancellation flag. Skips re-attempts once an
+  // error is shown to avoid retry loops.
+  useEffect(() => {
+    let cancelled = false;
+
+    async function tryAutoDecrypt() {
+      if (phase !== 'password' || !selectedShare) return;
+
+      const autoPassword = typeof process !== 'undefined' ? process.env.IGLOO_AUTOPASSWORD : undefined;
+      if (!autoPassword || autoPassword.length < 8) {
+        return; // keep interactive prompt visible; no auto attempt
+      }
+
+      if (autoError !== null) return;
+      setAutoDecrypting(true);
+
+      try {
+        const {shareCredential} = decryptShareCredential(selectedShare, autoPassword);
+        if (cancelled) return;
+        setResult({share: shareCredential, group: selectedShare.groupCredential});
+        setPhase('result');
+      } catch (error: any) {
+        if (cancelled) return;
+        setAutoError(error?.message ?? 'Failed to decrypt share with automation password.');
+      } finally {
+        if (!cancelled) setAutoDecrypting(false);
+      }
+    }
+
+    void tryAutoDecrypt();
+    return () => {
+      cancelled = true;
+    };
+  }, [phase, selectedShare, autoError]);
+
+  // In non-interactive test environments, auto-exit shortly after a successful
+  // result to avoid hanging the child process. Trigger via effect to avoid
+  // side-effects during render and to clean up timers on re-renders/unmount.
+  useEffect(() => {
+    if (!result) return;
+    const shouldAutoExit =
+      process.env.IGLOO_DISABLE_RAW_MODE === '1' || process.env.IGLOO_TEST_AUTOPILOT === '1';
+    if (!shouldAutoExit) return;
+
+    if (typeof window !== 'undefined') return; // ensure Node/CLI context
+    if (typeof process === 'undefined' || typeof process.exit !== 'function') return;
+
+    const timer: ReturnType<typeof setTimeout> = setTimeout(() => {
+      try {
+        process.exit(0);
+      } catch {}
+    }, 20);
+    return () => clearTimeout(timer);
+  }, [result]);
+
   const decryptedShare = result?.share ?? null;
   const decryptedGroup = result?.group ?? null;
+  const skipEcho = (() => {
+    const a = (process.env.IGLOO_SKIP_ECHO ?? '').toLowerCase();
+    return a === '1' || a === 'true';
+  })();
   const {status: echoStatus, message: echoMessage} = useShareEchoListener(
-    decryptedGroup,
-    decryptedShare
+    skipEcho ? undefined : decryptedGroup,
+    skipEcho ? undefined : decryptedShare
   );
 
   if (state.loading) {
@@ -143,6 +211,12 @@ export function KeysetLoad({args}: KeysetLoadProps) {
       <Box flexDirection="column">
         <Text color="cyanBright">Decrypt share: {selectedShare.name}</Text>
         <Text color="gray">Saved at {selectedShare.savedAt ?? 'unknown time'}</Text>
+        {autoDecrypting ? (
+          <Text color="cyan">Decrypting with automation password…</Text>
+        ) : null}
+        {autoError ? (
+          <Text color="red">{autoError}</Text>
+        ) : null}
         <Prompt
           key={`password-${selectedShare.id}`}
           label="Enter password"
@@ -192,6 +266,7 @@ export function KeysetLoad({args}: KeysetLoadProps) {
   } catch {
     groupInfo = undefined;
   }
+
 
   return (
     <Box flexDirection="column">

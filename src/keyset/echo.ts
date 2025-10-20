@@ -1,5 +1,9 @@
 import {randomBytes} from 'node:crypto';
-import {sendEcho, DEFAULT_ECHO_RELAYS, type NodeEventConfig} from '@frostr/igloo-core';
+import {sendEcho, type NodeEventConfig} from '@frostr/igloo-core';
+import {computeEchoRelays} from './echoRelays.js';
+
+// Simple echo wrapper using igloo-core >= 0.2.4. The library now handles
+// both legacy and challenge formats on the listener side.
 
 export type SendShareEchoOptions = {
   relays?: string[];
@@ -17,16 +21,34 @@ export async function sendShareEcho(
   shareCredential: string,
   {relays, challenge, timeout = 10000, eventConfig}: SendShareEchoOptions = {}
 ): Promise<void> {
+  const skip = (process.env.IGLOO_SKIP_ECHO ?? '').toLowerCase();
+  if (skip === '1' || skip === 'true') {
+    return;
+  }
   // Generate random challenge if not provided (32 bytes = 64 hex chars)
   const finalChallenge = challenge ?? randomBytes(32).toString('hex');
+  const envRelay = (process.env.IGLOO_TEST_RELAY ?? '').trim();
+  const relayUnion = computeEchoRelays(groupCredential, relays, envRelay);
+  const debugEnabled = ((process.env.IGLOO_DEBUG_ECHO ?? '').toLowerCase() === '1' || (process.env.IGLOO_DEBUG_ECHO ?? '').toLowerCase() === 'true');
+  const debugLogger = debugEnabled
+    ? ((level: string, message: string, data?: unknown) => {
+        try {
+          // eslint-disable-next-line no-console
+          console.log(`[echo-send] ${level.toUpperCase()} ${message}`, data ?? '');
+        } catch {}
+      })
+    : undefined;
 
-  // sendEcho in v0.2.1: sendEcho(groupCredential: string, shareCredential: string, challenge: string, options?: { relays?: string[]; timeout?: number; eventConfig?: NodeEventConfig; })
+  if (debugEnabled) {
+    try {
+      // eslint-disable-next-line no-console
+      console.log('[echo-send] INFO using relays', relayUnion);
+    } catch {}
+  }
+
   await sendEcho(groupCredential, shareCredential, finalChallenge, {
-    relays: relays ?? DEFAULT_ECHO_RELAYS,
+    relays: relayUnion,
     timeout,
-    eventConfig: {
-      enableLogging: false,
-      ...eventConfig
-    }
+    eventConfig: { enableLogging: debugEnabled, customLogger: debugLogger, ...eventConfig }
   });
 }

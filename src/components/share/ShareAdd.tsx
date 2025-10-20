@@ -90,6 +90,7 @@ export function ShareAdd({flags, args: _args, invokedVia}: ShareAddProps) {
   const outputDir = typeof flags.output === 'string' ? flags.output : undefined;
 
   const isMountedRef = useRef(true);
+  const autopilotRanRef = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -161,6 +162,164 @@ export function ShareAdd({flags, args: _args, invokedVia}: ShareAddProps) {
       <ShareNamespaceFrame invokedVia={invokedVia}>{children}</ShareNamespaceFrame>
     );
   }, [invokedVia]);
+
+  // Autopilot flow for CI/tests: drive the wizard without prompts
+  useEffect(() => {
+    const flag = (process.env.IGLOO_TEST_AUTOPILOT ?? '').toLowerCase();
+    const autopilot = flag === '1' || flag === 'true';
+    if (!autopilot || autopilotRanRef.current) return;
+
+    // If we have all inputs, perform a direct save without interactive steps
+    if (
+      groupFlag &&
+      shareFlag &&
+      (keysetName || (typeof nameFlag === 'string' && nameFlag.trim().length > 0)) &&
+      !automationLoading &&
+      automationPassword && automationPassword.length >= 8
+    ) {
+      autopilotRanRef.current = true;
+      const finalName = keysetName || (nameFlag as string).trim();
+      try {
+        // Parity with interactive flow: validate that the share belongs to the group
+        let shareIndex = 1;
+        try {
+          const group = decodeGroup(groupFlag) as any;
+          const share = decodeShare(shareFlag as string) as any;
+          if (typeof share?.idx !== 'number') {
+            throw new Error('Share credential is missing an index.');
+          }
+          const belongs = (() => {
+            try { return is_group_member(group, share ?? {}); } catch { return false; }
+          })();
+          if (!belongs) {
+            throw new Error('Share does not belong to the provided group.');
+          }
+          // Build summaries for the render path so the success screen has context
+          const commits: any[] = Array.isArray(group?.commits) ? group.commits : [];
+          const totalMembers = typeof group?.totalMembers === 'number'
+            ? group.totalMembers
+            : typeof group?.total_members === 'number'
+            ? group.total_members
+            : commits.length;
+          const pubkeys = commits
+            .map((commit, idx) => ({
+              idx: typeof commit?.idx === 'number' ? commit.idx : idx + 1,
+              pubkey: typeof commit?.pubkey === 'string' ? commit.pubkey : 'unknown'
+            }))
+            .sort((a, b) => a.idx - b.idx);
+          const groupSummaryObj: GroupSummary = {
+            credential: groupFlag,
+            threshold: typeof group?.threshold === 'number' ? group.threshold : commits.length,
+            totalMembers,
+            pubkeys,
+            raw: group
+          };
+          const commit = pubkeys.find((e: any) => e.idx === (share?.idx as number));
+          const shareSummaryObj: ShareSummary = {
+            credential: shareFlag,
+            index: share.idx,
+            pubkey: commit?.pubkey
+          };
+          setGroupSummary(groupSummaryObj);
+          setShareSummary(shareSummaryObj);
+          shareIndex = share.idx;
+        } catch (e: any) {
+          // Stop autopilot to avoid repeated attempts; fall back to interactive flow
+          autopilotRanRef.current = true;
+          setFeedback(e?.message ?? 'Failed to validate group/share.');
+          setMode('group');
+          return;
+        }
+
+        const now = new Date().toISOString();
+        const salt = randomSaltHex();
+        const secret = deriveSecret(
+          automationPassword,
+          salt,
+          SHARE_FILE_PBKDF2_ITERATIONS,
+          SHARE_FILE_PASSWORD_ENCODING,
+          SHARE_FILE_SALT_PBKDF2_EXPANDED_BYTES
+        );
+        const {cipherText} = encryptPayload(secret, shareFlag);
+        const index = shareIndex;
+        const record: ShareFileRecord = {
+          id: buildShareId(finalName, index),
+          name: `${finalName} share ${index}`,
+          share: cipherText,
+          salt,
+          groupCredential: groupFlag,
+          version: SHARE_FILE_VERSION,
+          savedAt: now,
+          metadata: {
+            createdBy: 'igloo-cli',
+            importedAt: now,
+            pbkdf2Iterations: SHARE_FILE_PBKDF2_ITERATIONS,
+            passwordEncoding: SHARE_FILE_PASSWORD_ENCODING
+          },
+          keysetName: finalName,
+          index,
+          policy: createDefaultPolicy(now)
+        };
+        void (async () => {
+          try {
+            const filepath = await saveShareRecord(record, {directory: outputDir});
+            // Always persist into the default appdata share directory as well,
+            // so other commands (e.g. `share list`) can discover the record.
+            try {
+              await saveShareRecord(record);
+            } catch {}
+            if (!isMountedRef.current) return;
+            setSavedPath(filepath);
+            setFeedback('Share imported successfully.');
+            // Prepare echo in autopilot as a fire-and-forget to allow tests
+            // to observe at least one EVENT on the ephemeral relay.
+            const skipEcho = ((process.env.IGLOO_SKIP_ECHO ?? '').toLowerCase());
+            const shouldEcho = !(skipEcho === '1' || skipEcho === 'true');
+            if (shouldEcho && groupFlag && shareFlag) {
+              try {
+                setEchoStatus('pending');
+                // Fire-and-forget to avoid blocking automation; log errors.
+                void sendShareEcho(groupFlag, shareFlag).catch((err: any) => {
+                  const msg = err?.message ?? String(err ?? '');
+                  // eslint-disable-next-line no-console
+                  try { console.warn('[igloo-cli] Echo send error (autopilot):', msg); } catch {}
+                });
+              } catch {
+                // ignore; UI feedback handled below
+              }
+            } else {
+              setEchoStatus('success');
+            }
+            // Give the fire-and-forget echo a brief head start so test relays
+            // can observe at least one EVENT before the harness terminates.
+            try {
+              const raw = process.env.IGLOO_TEST_AUTOPILOT_ECHO_GRACE_MS;
+              const parsed = raw ? Number(raw) : NaN;
+              const grace = Number.isFinite(parsed) && parsed >= 0 ? parsed : 500;
+              await new Promise(res => setTimeout(res, grace));
+            } catch {}
+            // Emit a plain log line directly to stdout so automated tests can
+            // detect completion even when Ink rendering is suppressed.
+            try { process.stdout.write('Share saved.\n'); } catch {}
+            if (!isMountedRef.current) return;
+            setMode('done');
+            // Do not exit immediately here; allow the UI to render the
+            // success screen so tests can detect "Share saved." reliably.
+          } catch (err: any) {
+            if (!isMountedRef.current) return;
+            autopilotRanRef.current = true; // stop further autopilot attempts
+            setFeedback(err?.message ?? 'Autopilot save failed.');
+            setMode('group');
+          }
+        })();
+      } catch (error: any) {
+        // Stop autopilot and return to interactive flow starting at group step
+        autopilotRanRef.current = true;
+        setFeedback(error?.message ?? 'Autopilot save failed.');
+        setMode('group');
+      }
+    }
+  }, [keysetName, automationLoading, automationPassword, groupFlag, shareFlag, nameFlag]);
 
   function initialiseGroup(value: string): string | undefined {
     const trimmed = value.trim();
@@ -273,6 +432,22 @@ export function ShareAdd({flags, args: _args, invokedVia}: ShareAddProps) {
     }
   }, [mode, nameFlag, keysetName]);
 
+  // In non-interactive environments, auto-advance past the name step
+  useEffect(() => {
+    if (mode !== 'name') return;
+    const nonInteractive = (() => {
+      const a = (process.env.IGLOO_DISABLE_RAW_MODE ?? '').toLowerCase();
+      const b = (process.env.IGLOO_TEST_AUTOPILOT ?? '').toLowerCase();
+      return a === '1' || a === 'true' || b === '1' || b === 'true';
+    })();
+    if (!nonInteractive) return;
+    if (!keysetName && typeof nameFlag === 'string' && nameFlag.trim().length > 0) {
+      setKeysetName(nameFlag.trim());
+    }
+    // Advance to password stage automatically
+    setMode('password');
+  }, [mode, keysetName, nameFlag]);
+
   const resolvedKeysetName = keysetName || (typeof nameFlag === 'string' ? nameFlag.trim() : '');
   const duplicateRecord = useMemo(() => {
     if (!groupSummary || !shareSummary || resolvedKeysetName.length === 0) {
@@ -342,6 +517,10 @@ export function ShareAdd({flags, args: _args, invokedVia}: ShareAddProps) {
       };
 
       const filepath = await saveShareRecord(record, {directory: outputDir});
+      try {
+        // Also persist to the default share directory for discovery.
+        await saveShareRecord(record);
+      } catch {}
       let refreshed = shares;
       try {
         refreshed = await readShareFiles();
@@ -353,21 +532,29 @@ export function ShareAdd({flags, args: _args, invokedVia}: ShareAddProps) {
       setFeedback('Share imported successfully.');
       setEchoStatus('pending');
       setMode('done');
-      void (async () => {
-        try {
-          await sendShareEcho(groupSummary.credential, shareSummary.credential);
-          if (!isMountedRef.current) {
-            return;
-          }
-          setEchoStatus('success');
-        } catch (error: any) {
-          if (!isMountedRef.current) {
-            return;
-          }
-          setEchoStatus('error');
-          setEchoError(error?.message ?? 'Failed to send echo confirmation.');
-        }
+      const skipEcho = (() => {
+        const flag = (process.env.IGLOO_SKIP_ECHO ?? '').toLowerCase();
+        return flag === '1' || flag === 'true';
       })();
+      if (!skipEcho) {
+        void (async () => {
+          try {
+            await sendShareEcho(groupSummary.credential, shareSummary.credential);
+            if (!isMountedRef.current) {
+              return;
+            }
+            setEchoStatus('success');
+          } catch (error: any) {
+            if (!isMountedRef.current) {
+              return;
+            }
+            setEchoStatus('error');
+            setEchoError(error?.message ?? 'Failed to send echo confirmation.');
+          }
+        })();
+      } else {
+        setEchoStatus('success');
+      }
     } catch (error: any) {
       setFeedback(error?.message ?? 'Failed to save share.');
       setMode('password');
@@ -376,19 +563,32 @@ export function ShareAdd({flags, args: _args, invokedVia}: ShareAddProps) {
   }
 
   useEffect(() => {
-    if (mode !== 'password' || automationLoading) {
-      return;
-    }
-    if (!shareSummary || !groupSummary) {
-      return;
-    }
-    if (automationError) {
-      return;
-    }
+    if (mode !== 'password' || automationLoading) return;
+    if (!shareSummary || !groupSummary) return;
+    if (automationError) return;
     if (automationPassword && automationPassword.length >= 8) {
       void handleSave(automationPassword);
     }
   }, [mode, automationPassword, automationError, automationLoading, shareSummary, groupSummary]);
+
+  // When running in CI/autopilot, schedule a process exit after success.
+  // Trigger via effect to avoid side-effects during render and to clean up timers.
+  useEffect(() => {
+    const flag = (process.env.IGLOO_TEST_AUTOPILOT ?? '').toLowerCase();
+    const autopilot = flag === '1' || flag === 'true';
+    if (!(mode === 'done' && autopilot)) return;
+    if (typeof window !== 'undefined') return; // ensure Node/CLI context
+    if (typeof process === 'undefined' || typeof process.exit !== 'function') return;
+
+    const raw = process.env.IGLOO_TEST_AUTOPILOT_EXIT_MS;
+    const parsed = raw ? Number(raw) : NaN;
+    const delay = Number.isFinite(parsed) && parsed >= 0 ? parsed : 200;
+
+    const timer: ReturnType<typeof setTimeout> = setTimeout(() => {
+      try { process.exit(0); } catch {}
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [mode]);
 
   if (mode === 'loading') {
     return (

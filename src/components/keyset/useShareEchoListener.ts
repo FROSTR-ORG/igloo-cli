@@ -1,11 +1,5 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {
-  awaitShareEcho,
-  decodeGroup,
-  createAndConnectNode,
-  cleanupBifrostNode,
-  DEFAULT_ECHO_RELAYS
-} from '@frostr/igloo-core';
+import {awaitShareEcho, decodeGroup, DEFAULT_ECHO_RELAYS} from '@frostr/igloo-core';
 import {resolveRelaysWithFallbackSync} from '../../keyset/relays.js';
 
 export type EchoStatus = 'idle' | 'listening' | 'success';
@@ -78,14 +72,22 @@ export function useShareEchoListener(
   const activeShareRef = useRef<string | null>(null);
   const fallbackTriggeredRef = useRef(false);
   const relays = useMemo(() => {
+    const envOverride = typeof process !== 'undefined' ? process.env.IGLOO_TEST_RELAY : undefined;
+    if (envOverride && envOverride.length > 0) {
+      const normalize = (u: string) => (/^wss?:\/\//i.test(u) ? u.replace(/^http/i, 'ws') : `wss://${u}`);
+      return [normalize(envOverride)];
+    }
     if (!groupCredential) {
       return undefined;
     }
     try {
       const decoded = decodeGroup(groupCredential);
       const fromGroup = extractRelays(decoded);
-      if (fromGroup && fromGroup.length > 0) return fromGroup;
-      // fall back to configured relays, or DEFAULT_ECHO_RELAYS
+      const normalize = (u: string) => (/^wss?:\/\//i.test(u) ? u.replace(/^http/i, 'ws') : `wss://${u}`);
+      const groupSet = new Set((fromGroup ?? []).map(normalize));
+      const defaults = DEFAULT_ECHO_RELAYS.map(normalize);
+      const union = [...new Set([...defaults, ...groupSet])];
+      if (union.length > 0) return union;
       return resolveRelaysWithFallbackSync(undefined, DEFAULT_ECHO_RELAYS);
     } catch {
       // ignore decode failures; we'll fall back to default relays
@@ -147,59 +149,40 @@ export function useShareEchoListener(
 
     void (async () => {
       try {
-        // Start awaitShareEcho but don't wait for it since it has a bug where it doesn't resolve
-        const echoPromise = awaitShareEcho(
+        const debugEnabled = ((process.env.IGLOO_DEBUG_ECHO ?? '').toLowerCase() === '1' || (process.env.IGLOO_DEBUG_ECHO ?? '').toLowerCase() === 'true');
+        const debugLogger = debugEnabled
+          ? ((level: string, message: string, data?: unknown) => {
+              try {
+                // eslint-disable-next-line no-console
+                console.log(`[echo-listen] ${level.toUpperCase()} ${message}`, data ?? '');
+              } catch {}
+            })
+          : undefined;
+        const result = await awaitShareEcho(
           groupCredential,
           shareCredential,
-          {relays, timeout: timeoutMs}
+          { relays, timeout: timeoutMs, eventConfig: { enableLogging: debugEnabled, customLogger: debugLogger } }
         );
-
-        // Race against a fallback timer - if echo hasn't resolved after 15 seconds,
-        // assume it worked (since logs show it receives messages but doesn't resolve)
-        const fallbackPromise = new Promise<boolean>((resolve) => {
-          fallbackTimeoutRef.current = setTimeout(() => {
-            fallbackTimeoutRef.current = null;
-            if (!controller.cancelled) {
-              fallbackTriggeredRef.current = true;
-              setMessage('Echo confirmation timeout - assuming successful delivery');
-            }
-            resolve(true);
-          }, 15000);
-        });
-
-        const result = await Promise.race([echoPromise, fallbackPromise]);
-
-        if (controller.cancelled) {
-          return;
-        }
-
-        if (fallbackTimeoutRef.current) {
-          clearTimeout(fallbackTimeoutRef.current);
-          fallbackTimeoutRef.current = null;
-        }
-
-        setStatus('success');
-        if (fallbackTriggeredRef.current) {
-          fallbackTriggeredRef.current = false;
-        } else {
+        if (controller.cancelled) return;
+        if (result) {
+          setStatus('success');
           setMessage(null);
+          retryCountRef.current = 0;
+        } else {
+          setStatus('listening');
+          setMessage('No echo yet.');
         }
-        retryCountRef.current = 0;
       } catch (err: any) {
-        if (controller.cancelled) {
-          return;
-        }
-        // surface last error but keep listening by scheduling retry
+        if (controller.cancelled) return;
         const reason = err?.message ?? 'No echo confirmation received yet.';
         if (retryCountRef.current >= maxRetries) {
           setStatus('idle');
-          setMessage('Maximum retries reached.');
+          setMessage(reason);
           clearPending();
           return;
         }
         setStatus('listening');
         setMessage(reason);
-
         const exponentialDelay = retryDelayMs * (2 ** retryCountRef.current);
         const backoffDelay = Math.min(exponentialDelay, maxBackoffMs);
         if (retryTimeoutRef.current) {
@@ -216,7 +199,6 @@ export function useShareEchoListener(
           clearTimeout(fallbackTimeoutRef.current);
           fallbackTimeoutRef.current = null;
         }
-        fallbackTriggeredRef.current = false;
         if (warningTimeoutRef.current) {
           clearTimeout(warningTimeoutRef.current);
           warningTimeoutRef.current = null;

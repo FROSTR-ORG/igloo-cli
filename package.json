@@ -4,11 +4,16 @@
   "description": "Command-line companion for the FROSTR ecosystem.",
   "main": "dist/cli.js",
   "scripts": {
-    "test": "npm run typecheck && tsx --test tests/relays.test.ts",
+    "test": "npm run typecheck && npm run build && tsx --test",
     "build": "tsup",
     "dev": "tsx src/cli.tsx",
     "start": "node dist/cli.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "dev:bun": "bunx tsx src/cli.tsx",
+    "build:bun": "bunx tsup",
+    "test:bun": "bunx tsc --noEmit && bunx tsx --test tests/relays.test.ts",
+    "typecheck:bun": "bunx tsc --noEmit",
+    "start:bun": "bun dist/cli.js"
   },
   "repository": {
     "type": "git",
@@ -23,7 +28,7 @@
   "homepage": "https://github.com/FROSTR-ORG/igloo-cli#readme",
   "dependencies": {
     "@frostr/bifrost": "^1.0.7",
-    "@frostr/igloo-core": "^0.2.3",
+    "@frostr/igloo-core": "^0.2.4",
     "@noble/ciphers": "^2.0.1",
     "@noble/curves": "^2.0.1",
     "@noble/hashes": "^2.0.1",
@@ -49,5 +54,8 @@
   "files": [
     "dist"
   ],
-  "type": "module"
+  "type": "module",
+  "publishConfig": {
+    "access": "public"
+  }
 }
