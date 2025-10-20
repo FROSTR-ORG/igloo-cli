@@ -10,12 +10,17 @@ import packageJson from '../package.json' with {type: 'json'};
 // that can surface as unhandled promise rejections in Node 20+.
 // See: AbstractRelay.closeAllSubscriptions("relay connection closed by us").
 // We specifically ignore only this message to avoid hiding real errors.
-try {
+if (typeof process !== 'undefined' && typeof process.on === 'function') {
   process.on('unhandledRejection', (reason: unknown) => {
-    const msg = typeof reason === 'string' ? reason : (reason as any)?.message ?? '';
-    if (String(msg).toLowerCase() === 'relay connection closed by us') {
-      return; // ignore expected shutdown noise
-    }
+    let benign = false;
+    try {
+      const msg = typeof reason === 'string' ? reason : (reason as any)?.message ?? '';
+      if (String(msg).toLowerCase() === 'relay connection closed by us') {
+        benign = true;
+      }
+    } catch {}
+    if (benign) return; // ignore expected shutdown noise
+
     // Surface all other rejections by rethrowing as an uncaught exception.
     // This preserves Node's default fail-fast behavior and visibility.
     try {
@@ -29,7 +34,12 @@ try {
       throw new Error(typeof reason === 'string' ? reason : JSON.stringify(reason));
     });
   });
-} catch {}
+} else {
+  try {
+    // eslint-disable-next-line no-console
+    console.error('Failed to register unhandledRejection handler: process.on is not available');
+  } catch {}
+}
 
 type Flags = Record<string, string | boolean>;
 
@@ -145,6 +155,20 @@ if (process.env.IGLOO_DISABLE_RAW_MODE === '1' || process.env.IGLOO_DISABLE_RAW_
   };
 }
 
+// Provide light polyfills for Bun or environments lacking ref/unref on stdin.
+// These are no-ops and safe under Node.
+try {
+  const stdinPoly: any = process.stdin as any;
+  if (stdinPoly && typeof stdinPoly.ref !== 'function') {
+    stdinPoly.ref = () => {};
+  }
+  if (stdinPoly && typeof stdinPoly.unref !== 'function') {
+    stdinPoly.unref = () => {};
+  }
+} catch {
+  // best-effort only
+}
+
 if (shouldShowVersion) {
   showVersion(packageJson.version);
 }
@@ -174,17 +198,4 @@ if (showHelp) {
     />,
     inkOptions
   );
-}
-// Provide light polyfills for Bun or environments lacking ref/unref on stdin.
-// These are no-ops and safe under Node.
-try {
-  const stdinPoly: any = process.stdin as any;
-  if (stdinPoly && typeof stdinPoly.ref !== 'function') {
-    stdinPoly.ref = () => {};
-  }
-  if (stdinPoly && typeof stdinPoly.unref !== 'function') {
-    stdinPoly.unref = () => {};
-  }
-} catch {
-  // best-effort only
 }

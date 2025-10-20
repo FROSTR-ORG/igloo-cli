@@ -82,13 +82,9 @@ export function KeysetLoad({args}: KeysetLoadProps) {
         return; // keep interactive prompt visible; no auto attempt
       }
 
-      // If we already surfaced an error for this selection, don't retry until
-      // the user changes selection or resolves it manually.
-      if (autoError) return;
-
-      // Ensure stale errors are cleared before attempting.
-      if (autoError !== null) setAutoError(null);
+      if (autoError !== null) return;
       setAutoDecrypting(true);
+
       try {
         const {shareCredential} = decryptShareCredential(selectedShare, autoPassword);
         if (cancelled) return;
