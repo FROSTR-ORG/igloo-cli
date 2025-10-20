@@ -1,5 +1,5 @@
 import {EventEmitter} from 'node:events';
-import {WebSocketServer, WebSocket} from 'ws';
+import {WebSocketServer as WebSocketServerCtor} from 'ws';
 
 export type NostrRelayConfig = {
   purgeIntervalSec?: number;
@@ -9,7 +9,7 @@ export type NostrRelayConfig = {
 };
 
 type Subscription = {
-  client: WebSocket;
+  client: any;
   subId: string;
   filters: any[];
 };
@@ -79,7 +79,7 @@ export class NostrRelay extends EventEmitter {
   private readonly subs: Map<string, Subscription> = new Map();
   private readonly cache: NostrEvent[] = [];
   private readonly config: Required<NostrRelayConfig>;
-  private wss?: WebSocketServer;
+  private wss?: any;
   private _url?: string;
 
   constructor(options: NostrRelayConfig = {}) {
@@ -103,7 +103,7 @@ export class NostrRelay extends EventEmitter {
   async start(): Promise<string> {
     return new Promise((resolve, reject) => {
       try {
-        this.wss = new WebSocketServer({port: this.config.port});
+        this.wss = new WebSocketServerCtor({port: this.config.port});
         this.wss.on('listening', () => {
           const addr = this.wss!.address();
           const port = typeof addr === 'object' && addr ? addr.port : this.config.port;
@@ -111,8 +111,8 @@ export class NostrRelay extends EventEmitter {
           if (this.config.info) console.log('[relay] listening at', this._url);
           resolve(this._url);
         });
-        this.wss.on('connection', (ws: WebSocket) => this.handleConnection(ws));
-        this.wss.on('error', (err) => {
+        this.wss.on('connection', (ws: any) => this.handleConnection(ws));
+        this.wss.on('error', (err: unknown) => {
           if (this.config.info) console.error('[relay] error', err);
         });
         setInterval(() => {
@@ -133,7 +133,7 @@ export class NostrRelay extends EventEmitter {
     this.cache.length = 0;
   }
 
-  private handleConnection(ws: WebSocket) {
+  private handleConnection(ws: any) {
     const sid = Math.random().toString().slice(2, 8);
     const debug = (...args: any[]) => this.config.debug && console.log(`[client ${sid}]`, ...args);
     debug('connected');
@@ -209,4 +209,3 @@ export async function startEphemeralRelay(options: NostrRelayConfig = {}) {
   const url = await relay.start();
   return {relay, url};
 }
-

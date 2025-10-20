@@ -6,6 +6,31 @@ import App from './App.js';
 import {Help} from './components/Help.js';
 import packageJson from '../package.json' with {type: 'json'};
 
+// Swallow benign Nostr pool shutdown rejections from nostr-tools
+// that can surface as unhandled promise rejections in Node 20+.
+// See: AbstractRelay.closeAllSubscriptions("relay connection closed by us").
+// We specifically ignore only this message to avoid hiding real errors.
+try {
+  process.on('unhandledRejection', (reason: unknown) => {
+    const msg = typeof reason === 'string' ? reason : (reason as any)?.message ?? '';
+    if (String(msg).toLowerCase() === 'relay connection closed by us') {
+      return; // ignore expected shutdown noise
+    }
+    // Surface all other rejections by rethrowing as an uncaught exception.
+    // This preserves Node's default fail-fast behavior and visibility.
+    try {
+      // eslint-disable-next-line no-console
+      console.error('Unhandled promise rejection:', reason);
+    } catch {}
+    setImmediate(() => {
+      if (reason instanceof Error) {
+        throw reason;
+      }
+      throw new Error(typeof reason === 'string' ? reason : JSON.stringify(reason));
+    });
+  });
+} catch {}
+
 type Flags = Record<string, string | boolean>;
 
 type ParsedArgs = {

@@ -149,10 +149,19 @@ export function useShareEchoListener(
 
     void (async () => {
       try {
+        const debugEnabled = ((process.env.IGLOO_DEBUG_ECHO ?? '').toLowerCase() === '1' || (process.env.IGLOO_DEBUG_ECHO ?? '').toLowerCase() === 'true');
+        const debugLogger = debugEnabled
+          ? ((level: string, message: string, data?: unknown) => {
+              try {
+                // eslint-disable-next-line no-console
+                console.log(`[echo-listen] ${level.toUpperCase()} ${message}`, data ?? '');
+              } catch {}
+            })
+          : undefined;
         const result = await awaitShareEcho(
           groupCredential,
           shareCredential,
-          { relays, timeout: timeoutMs, eventConfig: { enableLogging: false } }
+          { relays, timeout: timeoutMs, eventConfig: { enableLogging: debugEnabled, customLogger: debugLogger } }
         );
         if (controller.cancelled) return;
         if (result) {

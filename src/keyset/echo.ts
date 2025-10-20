@@ -1,5 +1,6 @@
 import {randomBytes} from 'node:crypto';
 import {sendEcho, type NodeEventConfig} from '@frostr/igloo-core';
+import {computeEchoRelays} from './echoRelays.js';
 
 // Simple echo wrapper using igloo-core >= 0.2.4. The library now handles
 // both legacy and challenge formats on the listener side.
@@ -27,13 +28,27 @@ export async function sendShareEcho(
   // Generate random challenge if not provided (32 bytes = 64 hex chars)
   const finalChallenge = challenge ?? randomBytes(32).toString('hex');
   const envRelay = (process.env.IGLOO_TEST_RELAY ?? '').trim();
-  const normalize = (u: string) => (/^wss?:\/\//i.test(u) ? u.replace(/^http/i, 'ws') : `wss://${u}`);
-  const explicitRelays = Array.isArray(relays) && relays.length > 0 ? relays.map(normalize) : undefined;
-  const overrideRelays = envRelay ? [normalize(envRelay)] : undefined;
+  const relayUnion = computeEchoRelays(groupCredential, relays, envRelay);
+  const debugEnabled = ((process.env.IGLOO_DEBUG_ECHO ?? '').toLowerCase() === '1' || (process.env.IGLOO_DEBUG_ECHO ?? '').toLowerCase() === 'true');
+  const debugLogger = debugEnabled
+    ? ((level: string, message: string, data?: unknown) => {
+        try {
+          // eslint-disable-next-line no-console
+          console.log(`[echo-send] ${level.toUpperCase()} ${message}`, data ?? '');
+        } catch {}
+      })
+    : undefined;
+
+  if (debugEnabled) {
+    try {
+      // eslint-disable-next-line no-console
+      console.log('[echo-send] INFO using relays', relayUnion);
+    } catch {}
+  }
 
   await sendEcho(groupCredential, shareCredential, finalChallenge, {
-    relays: explicitRelays ?? overrideRelays, // let igloo-core resolve group/defaults otherwise
+    relays: relayUnion,
     timeout,
-    eventConfig: { enableLogging: false, ...eventConfig }
+    eventConfig: { enableLogging: debugEnabled, customLogger: debugLogger, ...eventConfig }
   });
 }
