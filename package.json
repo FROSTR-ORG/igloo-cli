@@ -4,7 +4,7 @@
   "description": "Command-line companion for the FROSTR ecosystem.",
   "main": "dist/cli.js",
   "scripts": {
-    "test": "npm run typecheck && npm run build && tsx --test tests/**/*.test.ts",
+    "test": "npm run typecheck && npm run build && tsx --test",
     "build": "tsup",
     "dev": "tsx src/cli.tsx",
     "start": "node dist/cli.js",
