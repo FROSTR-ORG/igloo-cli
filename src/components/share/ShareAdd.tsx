@@ -277,24 +277,30 @@ export function ShareAdd({flags, args: _args, invokedVia}: ShareAddProps) {
             const shouldEcho = !(skipEcho === '1' || skipEcho === 'true');
             if (shouldEcho && groupFlag && shareFlag) {
               try {
-                // Do not await; start immediately so it can complete before
-                // the test harness terminates the process after seeing output.
+                setEchoStatus('pending');
+                // Fire-and-forget to avoid blocking automation; log errors.
                 void sendShareEcho(groupFlag, shareFlag).catch((err: any) => {
                   const msg = err?.message ?? String(err ?? '');
                   // eslint-disable-next-line no-console
                   try { console.warn('[igloo-cli] Echo send error (autopilot):', msg); } catch {}
                 });
-                setEchoStatus('pending');
               } catch {
                 // ignore; UI feedback handled below
               }
             } else {
               setEchoStatus('success');
             }
+            // Give the fire-and-forget echo a brief head start so test relays
+            // can observe at least one EVENT before the harness terminates.
+            try {
+              const raw = process.env.IGLOO_TEST_AUTOPILOT_ECHO_GRACE_MS;
+              const parsed = raw ? Number(raw) : NaN;
+              const grace = Number.isFinite(parsed) && parsed >= 0 ? parsed : 500;
+              await new Promise(res => setTimeout(res, grace));
+            } catch {}
             // Emit a plain log line directly to stdout so automated tests can
             // detect completion even when Ink rendering is suppressed.
             try { process.stdout.write('Share saved.\n'); } catch {}
-            try { await new Promise(res => setTimeout(res, 10)); } catch {}
             if (!isMountedRef.current) return;
             setMode('done');
             // Do not exit immediately here; allow the UI to render the

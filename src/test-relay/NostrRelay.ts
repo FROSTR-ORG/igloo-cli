@@ -138,8 +138,23 @@ export class NostrRelay extends EventEmitter {
     const debug = (...args: any[]) => this.config.debug && console.log(`[client ${sid}]`, ...args);
     debug('connected');
 
-    ws.on('message', (buf: Buffer) => {
-      const raw = buf.toString();
+    ws.on('message', (data: any) => {
+      let raw: string;
+      try {
+        if (typeof data === 'string') {
+          raw = data;
+        } else if (data instanceof ArrayBuffer) {
+          raw = Buffer.from(data).toString('utf8');
+        } else if (Array.isArray(data)) {
+          raw = Buffer.concat(data).toString('utf8');
+        } else if (Buffer.isBuffer(data)) {
+          raw = data.toString('utf8');
+        } else {
+          raw = String(data ?? '');
+        }
+      } catch {
+        raw = '';
+      }
       let msg: any[] | null = null;
       try {
         msg = JSON.parse(raw);
