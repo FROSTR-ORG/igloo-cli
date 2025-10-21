@@ -18,7 +18,7 @@ export function Setup({threshold, total}: SetupProps) {
       <Box marginTop={1} flexDirection="column">
         <Text color="cyan">What you’ll do</Text>
         <Text>- Create a keyset (threshold-of-total) for your nsec.</Text>
-        <Text>- Encrypt each share with a password and save it to disk.</Text>
+        <Text>- Save one share here; hand off the rest to other devices.</Text>
         <Text>- Bring a share online later as a signer.</Text>
       </Box>
 
@@ -34,13 +34,19 @@ export function Setup({threshold, total}: SetupProps) {
       <Box marginTop={1} flexDirection="column">
         <Text color="cyan">2) Save encrypted shares</Text>
         <Text>
-          The wizard shows each share in turn. Choose a password (min 8 chars)
-          to encrypt and save a .json file per share.
+          The wizard shows each share in turn. To save a share on this device,
+          enter a password (min 8 chars). To skip a share here, press Enter and
+          handle it on another device.
         </Text>
         <Text color="gray">Saved to: {shareDir}</Text>
         <Text>
-          Automate if you prefer: add
-          {" `--password-file ./pass.txt` and/or `--output ./shares`"}.
+          If you intentionally save multiple shares on one machine, protect each
+          with a distinct password.
+        </Text>
+        <Text>
+          Automation: add {"`--password-file ./pass.txt`"} and/or
+          {" `--output ./shares`"}. Note that automation uses one password for
+          all saved shares in that run.
         </Text>
         <Text color="gray">List later with: igloo-cli share list</Text>
       </Box>
@@ -48,9 +54,10 @@ export function Setup({threshold, total}: SetupProps) {
       <Box marginTop={1} flexDirection="column">
         <Text color="cyan">3) Place shares safely</Text>
         <Text>
-          Keep only the minimum number of shares on this device. Use different
-          passwords for different shares and move extras to other signers or
-          offline backups.
+          Keep only the minimum number of shares on this device. Prefer saving
+          exactly one here and moving the others to fellow signers or offline
+          backups. If you do store more than one locally, use unique passwords
+          per share.
         </Text>
         <Text color="gray">
           Import on another device: igloo-cli share add --group &lt;bfgroup…&gt; --share &lt;bfshare…&gt;
