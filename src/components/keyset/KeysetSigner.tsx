@@ -17,7 +17,8 @@ import {
   PeerManager
 } from '@frostr/igloo-core';
 import type {BifrostNode} from '@frostr/igloo-core';
-import {SimplePool} from 'nostr-tools';
+// Ensure nostr subscribe shim is loaded if this component is used in isolation.
+import '../../polyfills/nostr.js';
 import {Prompt} from '../ui/Prompt.js';
 import {
   readShareFiles,
@@ -799,49 +800,3 @@ export function KeysetSigner({args, flags}: KeysetSignerProps) {
 }
 
 export default KeysetSigner;
-let simplePoolPatched = false;
-
-function ensureSimplePoolPatched() {
-  if (simplePoolPatched) {
-    return;
-  }
-
-  const prototype = (SimplePool as any)?.prototype;
-  if (!prototype) {
-    simplePoolPatched = true;
-    return;
-  }
-
-  if (prototype.__iglooFilterNormalizePatched) {
-    simplePoolPatched = true;
-    return;
-  }
-
-  const originalSubscribeMany = prototype.subscribeMany;
-  if (typeof originalSubscribeMany !== 'function') {
-    simplePoolPatched = true;
-    return;
-  }
-
-  prototype.subscribeMany = function patchedSubscribeMany(this: unknown, relays: unknown, filters: unknown, params: unknown) {
-    const normalizedFilters =
-      Array.isArray(filters) &&
-      filters.length === 1 &&
-      filters[0] !== null &&
-      typeof filters[0] === 'object' &&
-      !Array.isArray(filters[0])
-        ? filters[0]
-        : filters;
-
-    return originalSubscribeMany.call(this, relays, normalizedFilters, params);
-  };
-
-  Object.defineProperty(prototype, '__iglooFilterNormalizePatched', {
-    value: true,
-    enumerable: false
-  });
-
-  simplePoolPatched = true;
-}
-
-ensureSimplePoolPatched();

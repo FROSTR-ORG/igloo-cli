@@ -44,6 +44,7 @@ export function Help({version}: HelpProps) {
         <Text>--relays list      Override relay list (comma-separated)</Text>
         <Text>--verbose          Stream signer diagnostics</Text>
         <Text>--log-level level  Signer log level (debug|info|warn|error)</Text>
+        <Text>--debug-echo       Enable echo debug logs (relay + events)</Text>
       </Box>
     </Box>
   );

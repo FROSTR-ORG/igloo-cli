@@ -321,6 +321,8 @@ with `data === 'echo'` and newer challenge-based requests where `data` is an
 even-length hex string. No changes are required on the sender side when
 upgrading.
 
+Tip (CLI): when testing end-to-end with igloo-cli and igloo-desktop, you can enable detailed echo logs with the CLI flag `--debug-echo` (sets `IGLOO_DEBUG_ECHO=1` for that run). To guarantee relay overlap, set `IGLOO_TEST_RELAY=wss://your-relay` in both apps.
+
 ```typescript
 import { awaitShareEcho } from '@frostr/igloo-core';
 
@@ -366,6 +368,8 @@ try {
 ```
 
 `challenge` must be an even-length hexadecimal string (32 bytes / 64 hex characters recommended).
+
+Troubleshooting: some Nostr relays reject a single-element filter array during subscription. igloo-cli patches `nostr-tools`’s `SimplePool.subscribeMany` at runtime to unwrap `[[filter]]` → `filter`. If you are wiring listeners manually outside the CLI, apply the same normalization.
 #### `startListeningForAllEchoes(groupCredential, shareCredentials, callback, options?)`
 
 Starts listening for echo events on all shares in a keyset.

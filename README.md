@@ -155,6 +155,19 @@ Use the signer command once at least one encrypted share is saved locally:
 
 Use either `igloo status` or `igloo share status` to decrypt a saved share, connect a temporary bifrost node, and ping each peer. The command prints relay endpoints plus a color-coded list of online/offline peers. Provide `--password` or `--password-file` for automation, and customise relays with `--relays` when needed.
 
+### Echo debugging
+
+- `--debug-echo` — turn on verbose echo logs (both listener and sender). This sets `IGLOO_DEBUG_ECHO=1` for the current run.
+- `IGLOO_TEST_RELAY` — optionally pin a specific relay for both desktop and CLI, e.g.
+
+  ```bash
+  IGLOO_TEST_RELAY=wss://your-relay igloo share load --debug-echo
+  ```
+
+  Desktop and CLI must share at least one relay to exchange echo events.
+
+Behind the scenes, the CLI normalizes Nostr subscribe filters so relays that require a single filter object (instead of a one-element array) accept subscriptions reliably.
+
 ## Development scripts
 
 - Node (default)
