@@ -110,7 +110,7 @@ function renderShare(args: string[], flags: Record<string, string | boolean>) {
     case 'list':
       return <ShareList />;
     case 'load':
-      return <ShareLoad args={args.slice(1)} />;
+      return <ShareLoad args={args.slice(1)} flags={flags} />;
     case 'status':
       return <ShareStatus flags={flags} args={args.slice(1)} />;
     case 'signer':

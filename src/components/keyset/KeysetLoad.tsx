@@ -7,6 +7,7 @@ import {useShareEchoListener} from './useShareEchoListener.js';
 
 type KeysetLoadProps = {
   args: string[];
+  flags?: Record<string, string | boolean>;
 };
 
 type LoadState = {
@@ -17,7 +18,7 @@ type LoadState = {
 
 type Phase = 'select' | 'password' | 'result';
 
-export function KeysetLoad({args}: KeysetLoadProps) {
+export function KeysetLoad({args, flags}: KeysetLoadProps) {
   const [state, setState] = useState<LoadState>({loading: true, error: null, shares: []});
   const [phase, setPhase] = useState<Phase>('select');
   const [selectedShare, setSelectedShare] = useState<ShareMetadata | null>(null);
@@ -38,10 +39,13 @@ export function KeysetLoad({args}: KeysetLoadProps) {
 
   const attemptPreselect = useMemo(() => {
     if (state.shares.length === 0 || args.length === 0) {
-      return null;
+      // Fall through to flag-based selection if provided
+      // even when args are empty
     }
 
-    const token = args[0];
+    const tokenFromFlag = typeof flags?.share === 'string' ? flags!.share : undefined;
+    const token = tokenFromFlag ?? args[0];
+    if (!token) return null;
     const byId = state.shares.find(share => share.id === token || share.name === token);
     if (byId) {
       return byId;
@@ -53,7 +57,7 @@ export function KeysetLoad({args}: KeysetLoadProps) {
     }
 
     return null;
-  }, [state.shares, args]);
+  }, [state.shares, args, flags]);
 
   useEffect(() => {
     if (attemptPreselect && !selectedShare) {
