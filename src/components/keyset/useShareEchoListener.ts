@@ -158,6 +158,12 @@ export function useShareEchoListener(
               } catch {}
             })
           : undefined;
+        if (debugEnabled) {
+          try {
+            // eslint-disable-next-line no-console
+            console.log('[echo-listen] INFO using relays', relays ?? 'default');
+          } catch {}
+        }
         const result = await awaitShareEcho(
           groupCredential,
           shareCredential,

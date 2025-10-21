@@ -1,4 +1,5 @@
 import './polyfills/websocket.js';
+import './polyfills/nostr.js';
 import React from 'react';
 import {render} from 'ink';
 import {PassThrough} from 'node:stream';
@@ -114,6 +115,12 @@ function parseArgv(argv: string[]): ParsedArgs {
     delete flags.T;
   }
 
+  // Short alias: -E → --debug-echo
+  if (flags.E !== undefined && flags['debug-echo'] === undefined) {
+    flags['debug-echo'] = flags.E;
+    delete flags.E;
+  }
+
   return {
     command: positionals[0] ?? 'intro',
     args: positionals.slice(1),
@@ -121,6 +128,16 @@ function parseArgv(argv: string[]): ParsedArgs {
     showHelp,
     showVersion
   };
+}
+
+function toBool(value: string | boolean | undefined): boolean {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    const v = value.trim().toLowerCase();
+    if (['1', 'true', 'yes', 'on'].includes(v)) return true;
+    if (['0', 'false', 'no', 'off'].includes(v)) return false;
+  }
+  return false;
 }
 
 function showHelpScreen(version: string, opts?: any) {
@@ -136,6 +153,15 @@ function showVersion(version: string) {
 const {command, args, flags, showHelp, showVersion: shouldShowVersion} = parseArgv(
   process.argv.slice(2)
 );
+
+// Allow --debug-echo to enable/disable echo diagnostics without env vars.
+// This is read by echo send/listen utilities.
+(() => {
+  const raw = (flags['debug-echo'] ?? (flags as any).debugEcho) as string | boolean | undefined;
+  if (raw !== undefined) {
+    process.env.IGLOO_DEBUG_ECHO = toBool(raw) ? '1' : '0';
+  }
+})();
 
 // In non-interactive environments (CI/tests), Ink raw mode can throw.
 // Allow tests to opt-out via IGLOO_DISABLE_RAW_MODE=1
