@@ -1,7 +1,7 @@
 import {
   createBifrostNode,
   connectNode,
-  closeNode,
+  cleanupBifrostNode,
   decodeShare,
   decodeGroup,
   DEFAULT_ECHO_RELAYS,
@@ -67,11 +67,7 @@ export async function awaitShareEchoCompat(
       timeoutId = null;
     }
     if (node) {
-      try {
-        closeNode(node);
-      } catch {
-        // Ignore cleanup errors.
-      }
+      cleanupBifrostNode(node);
       node = null;
     }
   };
