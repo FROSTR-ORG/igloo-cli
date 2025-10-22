@@ -28,6 +28,8 @@ export async function sendShareEcho(
   // Generate random challenge if not provided (32 bytes = 64 hex chars)
   const finalChallenge = challenge ?? randomBytes(32).toString('hex');
   const envRelay = (process.env.IGLOO_TEST_RELAY ?? '').trim();
+  // computeEchoRelays: if envRelay is set (IGLOO_TEST_RELAY), it returns ONLY that relay
+  // to keep test/dev runs isolated from public defaults.
   const relayUnion = computeEchoRelays(groupCredential, relays, envRelay);
   const debugEnabled = ((process.env.IGLOO_DEBUG_ECHO ?? '').toLowerCase() === '1' || (process.env.IGLOO_DEBUG_ECHO ?? '').toLowerCase() === 'true');
   const debugLogger = debugEnabled
