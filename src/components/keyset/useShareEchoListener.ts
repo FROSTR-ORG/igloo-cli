@@ -1,6 +1,6 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {awaitShareEcho} from '@frostr/igloo-core';
 import {computeEchoRelays} from '../../keyset/echoRelays.js';
+import {awaitShareEchoCompat} from '../../keyset/awaitShareEchoCompat.js';
 
 export type EchoStatus = 'idle' | 'listening' | 'success';
 
@@ -131,7 +131,7 @@ export function useShareEchoListener(
             console.log('[echo-listen] INFO using relays', relays ?? 'default');
           } catch {}
         }
-        const result = await awaitShareEcho(
+        const result = await awaitShareEchoCompat(
           groupCredential,
           shareCredential,
           { relays, timeout: timeoutMs, eventConfig: { enableLogging: debugEnabled, customLogger: debugLogger } }
