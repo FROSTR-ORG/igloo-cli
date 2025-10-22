@@ -5,7 +5,7 @@
       "name": "igloo-cli",
       "dependencies": {
         "@frostr/bifrost": "^1.0.7",
-        "@frostr/igloo-core": "^0.2.3",
+        "@frostr/igloo-core": "0.2.4",
         "@noble/ciphers": "^2.0.1",
         "@noble/curves": "^2.0.1",
         "@noble/hashes": "^2.0.1",
@@ -86,7 +86,7 @@
 
     "@frostr/bifrost": ["@frostr/bifrost@1.0.7", "", { "dependencies": { "@cmdcode/buff": "^2.2.5", "@cmdcode/frost": "^1.1.3", "@cmdcode/nostr-p2p": "^2.0.11", "@noble/ciphers": "^1.2.1", "@noble/curves": "^1.8.1", "zod": "^3.24.1" } }, "sha512-9PO8s8ra7Cf94HqsF0sArRkLLFYqDyGfRKUOflTWMGgaDvSWIksNA8PckcXvy5/G6u4RtAkTAqki47+ga+7yow=="],
 
-    "@frostr/igloo-core": ["@frostr/igloo-core@0.2.3", "", { "dependencies": { "zod": "^3.24.2" }, "peerDependencies": { "@frostr/bifrost": "^1.0.6", "nostr-tools": "^2.10.0" } }, "sha512-PNH8lcxVe957EclKtu/zcpCekRoogX9rnMO5/OYcAiEp2Yyk0GKN35iy+M09de0JN7oGPgemzJmGA6TiJAcc+g=="],
+    "@frostr/igloo-core": ["@frostr/igloo-core@0.2.4", "", { "dependencies": { "zod": "^3.24.2" }, "peerDependencies": { "@frostr/bifrost": "^1.0.6", "nostr-tools": "^2.10.0" } }, "sha512-/tpYIyC0zpSuYdQPiSXtcpIYCoT3HZ82x4O0f7qYx/DVUp+RRLZAfltaJ4Ts1UkTdwN5yBqnlKk+nrTIqPMq/A=="],
 
     "@isaacs/cliui": ["@isaacs/cliui@8.0.2", "", { "dependencies": { "string-width": "^5.1.2", "string-width-cjs": "npm:string-width@^4.2.0", "strip-ansi": "^7.0.1", "strip-ansi-cjs": "npm:strip-ansi@^6.0.1", "wrap-ansi": "^8.1.0", "wrap-ansi-cjs": "npm:wrap-ansi@^7.0.0" } }, "sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA=="],
 
