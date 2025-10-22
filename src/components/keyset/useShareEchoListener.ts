@@ -1,6 +1,6 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {awaitShareEcho, decodeGroup, DEFAULT_ECHO_RELAYS} from '@frostr/igloo-core';
-import {resolveRelaysWithFallbackSync} from '../../keyset/relays.js';
+import {awaitShareEcho} from '@frostr/igloo-core';
+import {computeEchoRelays} from '../../keyset/echoRelays.js';
 
 export type EchoStatus = 'idle' | 'listening' | 'success';
 
@@ -30,22 +30,6 @@ export type UseShareEchoListenerOptions = {
 
 type ListenerController = {cancelled: boolean};
 
-type DecodedGroup = {
-  relays?: string[];
-  relayUrls?: string[];
-  relay_urls?: string[];
-  [key: string]: unknown;
-};
-
-function extractRelays(decoded: unknown): string[] | undefined {
-  const obj = decoded as DecodedGroup;
-  const candidate = obj?.relays ?? obj?.relayUrls ?? obj?.relay_urls;
-  if (Array.isArray(candidate) && candidate.every(item => typeof item === 'string' && item.length > 0)) {
-    return candidate;
-  }
-  return undefined;
-}
-
 export function useShareEchoListener(
   groupCredential?: string | null,
   shareCredential?: string | null,
@@ -72,27 +56,10 @@ export function useShareEchoListener(
   const activeShareRef = useRef<string | null>(null);
   const fallbackTriggeredRef = useRef(false);
   const relays = useMemo(() => {
-    const envOverride = typeof process !== 'undefined' ? process.env.IGLOO_TEST_RELAY : undefined;
-    if (envOverride && envOverride.length > 0) {
-      const normalize = (u: string) => (/^wss?:\/\//i.test(u) ? u.replace(/^http/i, 'ws') : `wss://${u}`);
-      return [normalize(envOverride)];
-    }
-    if (!groupCredential) {
-      return undefined;
-    }
-    try {
-      const decoded = decodeGroup(groupCredential);
-      const fromGroup = extractRelays(decoded);
-      const normalize = (u: string) => (/^wss?:\/\//i.test(u) ? u.replace(/^http/i, 'ws') : `wss://${u}`);
-      const groupSet = new Set((fromGroup ?? []).map(normalize));
-      const defaults = DEFAULT_ECHO_RELAYS.map(normalize);
-      const union = [...new Set([...defaults, ...groupSet])];
-      if (union.length > 0) return union;
-      return resolveRelaysWithFallbackSync(undefined, DEFAULT_ECHO_RELAYS);
-    } catch {
-      // ignore decode failures; we'll fall back to default relays
-    }
-    return resolveRelaysWithFallbackSync(undefined, DEFAULT_ECHO_RELAYS);
+    const envRelay = typeof process !== 'undefined' ? process.env.IGLOO_TEST_RELAY : undefined;
+    // computeEchoRelays will short‑circuit to ONLY envRelay when provided
+    // (IGLOO_TEST_RELAY), ensuring tests/local runs do not hit public relays.
+    return computeEchoRelays(groupCredential ?? undefined, undefined, envRelay);
   }, [groupCredential]);
 
   const clearPending = useCallback(() => {

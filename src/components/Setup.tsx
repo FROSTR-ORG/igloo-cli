@@ -12,7 +12,7 @@ export function Setup({threshold, total}: SetupProps) {
 
   return (
     <Box flexDirection="column" paddingX={1}>
-      <Text color="cyanBright">Get started with FROSTR</Text>
+      <Text color="cyanBright">Bootstrap your FROSTR signing circle</Text>
       <Text color="gray">Tip: use either "igloo" or "igloo-cli" — both work.</Text>
 
       <Box marginTop={1} flexDirection="column">

@@ -47,7 +47,26 @@ export function computeEchoRelays(
   overrides?: ComputeEchoRelaysOverrides
 ): string[] {
   const explicit = Array.isArray(explicitRelays) ? explicitRelays.map(normalize) : [];
-  const env = envRelay && envRelay.trim().length > 0 ? [normalize(envRelay)] : [];
+
+  // IGLOO_TEST_RELAY behavior:
+  // - If envRelay is set and there are NO explicit relays, return ONLY envRelay
+  //   to keep tests/local runs isolated from public relays.
+  // - If envRelay is set AND there ARE explicit relays, honor the explicit list
+  //   but add envRelay to ensure overlap with cooperating apps. Do not include
+  //   group/base relays in this mode to avoid accidental public connections.
+  if (envRelay && envRelay.trim().length > 0) {
+    const envOnly = [normalize(envRelay)];
+    if (explicit.length === 0) {
+      return envOnly;
+    }
+    const map = new Map<string, string>();
+    for (const r of [...explicit, ...envOnly]) {
+      const key = r.toLowerCase();
+      if (!map.has(key)) map.set(key, r);
+    }
+    return Array.from(map.values());
+  }
+
   const group = overrides?.groupRelays
     ? overrides.groupRelays.map(normalize)
     : extractGroupRelays(groupCredential);
@@ -55,7 +74,7 @@ export function computeEchoRelays(
 
   // Deduplicate by lowercase key but preserve original casing in output.
   const map = new Map<string, string>();
-  for (const list of [explicit, env, group, base]) {
+  for (const list of [explicit, group, base]) {
     for (const r of list) {
       const key = r.toLowerCase();
       if (!map.has(key)) map.set(key, r);

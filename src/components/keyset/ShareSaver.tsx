@@ -1,4 +1,4 @@
-import React, {useMemo, useState} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {Box, Text} from 'ink';
 import {decodeShare} from '@frostr/igloo-core';
 import {
@@ -73,6 +73,12 @@ export function ShareSaver({
 
   const share = shares[currentIndex];
   const isAutomated = typeof autoPassword === 'string' && autoPassword.length > 0;
+  const inputDisabled = (() => {
+    const a = (process.env.IGLOO_DISABLE_RAW_MODE ?? '').toLowerCase();
+    const b = (process.env.IGLOO_CLI_NO_INPUT ?? '').toLowerCase();
+    return a === '1' || a === 'true' || b === '1' || b === 'true';
+  })();
+  const shouldPrompt = !isAutomated && !inputDisabled;
 
   const {status: echoStatus, message: echoMessage} = useShareEchoListener(
     groupCredential,
@@ -116,8 +122,54 @@ export function ShareSaver({
           Run `igloo-cli share list` to review your saved shares later.
         </Text>
       </Box>
+      {shouldPrompt ? (
+        <Box marginTop={1}>
+          <Prompt
+            key="finish-keyset-create"
+            label="Press Enter to finish"
+            allowEmpty
+            onSubmit={() => {
+              try {
+                if (typeof process !== 'undefined' && typeof process.exit === 'function') {
+                  process.exit(0);
+                }
+              } catch {}
+              return undefined;
+            }}
+          />
+        </Box>
+      ) : null}
     </Box>
   );
+
+  // In non-interactive/automated runs, exit shortly after summary renders.
+  const done = !share;
+  useEffect(() => {
+    if (!done || shouldPrompt) return;
+    const timer = setTimeout(() => {
+      try {
+        if (typeof process !== 'undefined' && typeof process.exit === 'function') {
+          process.exit(0);
+        }
+      } catch {}
+    }, 20);
+    return () => clearTimeout(timer);
+  }, [done, shouldPrompt]);
+
+  // Automation completion auto-exit: explicit signal via autoState
+  useEffect(() => {
+    if (!isAutomated || shouldPrompt) return;
+    if (autoState !== 'done' && autoState !== 'error') return;
+    const code = autoState === 'done' ? 0 : 1;
+    const timer = setTimeout(() => {
+      try {
+        if (typeof process !== 'undefined' && typeof process.exit === 'function') {
+          process.exit(code);
+        }
+      } catch {}
+    }, 20);
+    return () => clearTimeout(timer);
+  }, [isAutomated, shouldPrompt, autoState]);
 
   if (!share) {
     if (!notified && onComplete) {

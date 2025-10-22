@@ -20,16 +20,15 @@ test('normalizeRelayUrl preserves path/query casing while mapping scheme', () =>
   );
 });
 
-test('computeEchoRelays forms a deduped union in priority order', () => {
+test('computeEchoRelays forms a deduped union in priority order (no env override)', () => {
   const explicit = ['wss://a.relay', 'relay.b', 'HTTP://c.relay', 'ws://d.relay'];
-  const env = 'wss://env.relay';
   const groupRelays = ['wss://a.relay', 'relay.e'];
   const baseRelays = ['wss://default.relay'];
 
   const result = computeEchoRelays(
     /* groupCredential */ undefined,
     explicit,
-    env,
+    /* envRelay */ undefined,
     {groupRelays, baseRelays}
   );
 
@@ -39,8 +38,6 @@ test('computeEchoRelays forms a deduped union in priority order', () => {
     'wss://relay.b',
     'ws://c.relay',
     'ws://d.relay',
-    // env
-    'wss://env.relay',
     // group (a.relay was duplicate)
     'wss://relay.e',
     // base
@@ -63,4 +60,24 @@ test('computeEchoRelays preserves original casing when deduping', () => {
     {baseRelays: []}
   );
   assert.deepEqual(result, ['ws://Relay.Example/ECHO']);
+});
+
+test('computeEchoRelays respects env override with explicit relays', () => {
+  const result = computeEchoRelays(
+    undefined,
+    ['wss://a.relay', 'wss://b.relay'],
+    'wss://env.relay',
+    {groupRelays: ['wss://c.relay'], baseRelays: ['wss://default.relay']}
+  );
+  assert.deepEqual(result, ['wss://a.relay', 'wss://b.relay', 'wss://env.relay']);
+});
+
+test('computeEchoRelays env override with no explicit relays returns only env', () => {
+  const result = computeEchoRelays(
+    undefined,
+    undefined,
+    'wss://env.relay',
+    {groupRelays: ['wss://c.relay'], baseRelays: ['wss://default.relay']}
+  );
+  assert.deepEqual(result, ['wss://env.relay']);
 });
