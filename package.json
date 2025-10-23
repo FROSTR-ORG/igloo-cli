@@ -1,6 +1,6 @@
 {
   "name": "igloo-cli",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Command-line companion for the FROSTR ecosystem.",
   "main": "dist/cli.js",
   "scripts": {
