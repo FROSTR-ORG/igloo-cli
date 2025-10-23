@@ -286,6 +286,20 @@ export function SharePolicy({flags, args, invokedVia}: SharePolicyProps) {
     return new Map(peerOptions.map(option => [option.normalized, option]));
   }, [peerOptions]);
 
+  const policy: SharePolicy | null = selectedShare
+    ? selectedShare.policy ?? ensurePolicy(selectedShare)
+    : null;
+  const peerEntries = policy
+    ? Object.entries(policy.peers ?? {}).sort(([a], [b]) => a.localeCompare(b))
+    : [];
+
+  useEffect(() => {
+    if (mode === 'remove-peer' && peerEntries.length === 0) {
+      setMode('menu');
+      setFeedback('No peer overrides to remove.');
+    }
+  }, [mode, peerEntries.length]);
+
   const applyShareUpdate = (next: ShareMetadata, message: string) => {
     setState(prev => ({
       ...prev,
@@ -358,24 +372,14 @@ export function SharePolicy({flags, args, invokedVia}: SharePolicyProps) {
     );
   }
 
-  if (!selectedShare) {
+  if (!selectedShare || !policy) {
     return renderFrame(
       <Box flexDirection="column">
         <Text color="red">Share selection missing.</Text>
       </Box>
     );
   }
-
-  const policy = selectedShare.policy ?? ensurePolicy(selectedShare);
-  const peerEntries = Object.entries(policy.peers ?? {}).sort(([a], [b]) => a.localeCompare(b));
   const keysetLabel = deriveKeysetLabel(selectedShare);
-
-  useEffect(() => {
-    if (mode === 'remove-peer' && peerEntries.length === 0) {
-      setMode('menu');
-      setFeedback('No peer overrides to remove.');
-    }
-  }, [mode, peerEntries.length]);
 
   if (mode === 'saving') {
     return renderFrame(

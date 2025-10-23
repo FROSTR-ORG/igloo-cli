@@ -13,11 +13,8 @@ export function About() {
         <Text>- Communicate over encrypted nostr relays via bifrost.</Text>
       </Box>
       <Box flexDirection="column" marginTop={1}>
-        <Text color="cyan">Other Igloo projects</Text>
-        <Text>- Igloo Desktop: local signing device and share manager.</Text>
-        <Text>- Frost2x: browser signer that speaks NIP-07 and NIP-46.</Text>
-        <Text>- Igloo Server: personal relay and signing service.</Text>
-        <Text>- Igloo Mobile and Serverless: upcoming footprints.</Text>
+        <Text color="cyan">Explore More</Text>
+        <Text>- Browse the full Igloo app suite at frostr.org/apps.</Text>
       </Box>
     </Box>
   );
