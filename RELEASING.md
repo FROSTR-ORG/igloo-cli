@@ -4,7 +4,20 @@ This project uses a tag-driven GitHub Actions workflow to build, test, and creat
 
 ## One-time setup
 
-1) Ensure your local Git is configured to sign tags with your PGP key (recommended):
+1) **npm organization access**: Ensure you're logged into npm and have publish access to the `@frostr` organization:
+
+```sh
+# Login to npm (if not already logged in)
+npm login
+
+# Verify you have access to @frostr organization
+npm org ls @frostr
+
+# If you don't have access, ask an organization owner to add you:
+# npm org add <your-npm-username> @frostr
+```
+
+2) Ensure your local Git is configured to sign tags with your PGP key (recommended):
 
 ```sh
 gpg --list-secret-keys --keyid-format=long
@@ -12,7 +25,7 @@ git config --global user.signingkey <KEYID>
 git config --global tag.gpgSign true
 ```
 
-> Tip: You must have added the matching public key to your GitHub account for the “Verified” badge.
+> Tip: You must have added the matching public key to your GitHub account for the "Verified" badge.
 
 ## Cut a release
 
@@ -43,13 +56,13 @@ npm run build
 npm pack
 
 # Optional: PGP-sign the tarball for distribution integrity
-gpg --armor --detach-sign igloo-cli-1.0.1.tgz   # creates .asc
+gpg --armor --detach-sign frostr-igloo-cli-1.0.1.tgz   # creates .asc
 
-# Publish (uses publishConfig.access = public)
+# Publish to @frostr organization (uses publishConfig.access = public)
 npm publish
 
 # Optional: upload the .asc signature to the GitHub Release
-# gh release upload v1.0.1 igloo-cli-1.0.1.tgz.asc
+# gh release upload v1.0.1 frostr-igloo-cli-1.0.1.tgz.asc
 ```
 
 ## Notes on signing

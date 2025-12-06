@@ -1,9 +1,9 @@
 # igloo-cli
 
-[![npm version](https://img.shields.io/npm/v/igloo-cli.svg?logo=npm&label=npm)](https://www.npmjs.com/package/igloo-cli)
+[![npm version](https://img.shields.io/npm/v/@frostr/igloo-cli.svg?logo=npm&label=npm)](https://www.npmjs.com/package/@frostr/igloo-cli)
 
 ```bash
-npm install -g igloo-cli
+npm install -g @frostr/igloo-cli
 ```
 
 Command-line companion for the FROSTR signing stack, built with React, Ink, and TypeScript.
