@@ -1,8 +1,9 @@
 import React, {useEffect, useMemo, useState} from 'react';
-import {Box, Text} from 'ink';
+import {Box, Text, useInput, useStdin} from 'ink';
 import {decodeGroup, decodeShare} from '@frostr/igloo-core';
 import {readShareFiles, decryptShareCredential, ShareMetadata} from '../../keyset/index.js';
 import {Prompt} from '../ui/Prompt.js';
+import {CredentialDisplay} from '../ui/CredentialDisplay.js';
 import {useShareEchoListener} from './useShareEchoListener.js';
 
 type KeysetLoadProps = {
@@ -25,6 +26,10 @@ export function KeysetLoad({args, flags}: KeysetLoadProps) {
   const [result, setResult] = useState<{share: string; group: string} | null>(null);
   const [autoDecrypting, setAutoDecrypting] = useState<boolean>(false);
   const [autoError, setAutoError] = useState<string | null>(null);
+
+  const showQRFlag = flags?.qr === true || flags?.['show-qr'] === true;
+  const [qrVisible, setQrVisible] = useState(showQRFlag);
+  const {isRawModeSupported} = useStdin();
 
   useEffect(() => {
     void (async () => {
@@ -138,6 +143,12 @@ export function KeysetLoad({args, flags}: KeysetLoadProps) {
     skipEcho ? undefined : decryptedGroup,
     skipEcho ? undefined : decryptedShare
   );
+
+  useInput((input) => {
+    if (input === 'q' || input === 'Q') {
+      setQrVisible(v => !v);
+    }
+  }, {isActive: isRawModeSupported && phase === 'result'});
 
   if (state.loading) {
     return (
@@ -275,12 +286,23 @@ export function KeysetLoad({args, flags}: KeysetLoadProps) {
   return (
     <Box flexDirection="column">
       <Text color="green">Share decrypted successfully.</Text>
-      <Text color="cyan">Share credential</Text>
-      <Text color="gray">{result.share}</Text>
-      <Box marginTop={1}>
-        <Text color="cyan">Group credential</Text>
-      </Box>
-      <Text color="gray">{result.group}</Text>
+      <CredentialDisplay
+        label="Share credential"
+        credential={result.share}
+        labelColor="cyan"
+        textColor="gray"
+        showQR={qrVisible}
+      />
+      <CredentialDisplay
+        label="Group credential"
+        credential={result.group}
+        labelColor="cyan"
+        textColor="gray"
+        showQR={qrVisible}
+      />
+      {isRawModeSupported ? (
+        <Text color="gray">Press Q to {qrVisible ? 'hide' : 'show'} QR codes</Text>
+      ) : null}
       {shareIndex !== undefined ? (
         <Box marginTop={1} flexDirection="column">
           <Text color="cyan">Share details</Text>
@@ -311,6 +333,23 @@ export function KeysetLoad({args, flags}: KeysetLoadProps) {
           <Text color="green">Echo confirmed by the receiving device.</Text>
         ) : null}
       </Box>
+      {isRawModeSupported ? (
+        <Box marginTop={1}>
+          <Prompt
+            key="finish-share-load"
+            label="Press Enter to finish"
+            allowEmpty
+            onSubmit={() => {
+              try {
+                if (typeof process !== 'undefined' && typeof process.exit === 'function') {
+                  process.exit(0);
+                }
+              } catch {}
+              return undefined;
+            }}
+          />
+        </Box>
+      ) : null}
     </Box>
   );
 }
