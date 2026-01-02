@@ -130,6 +130,7 @@ export function KeysetCreate({flags}: KeysetCreateProps) {
   const passwordFilePath = typeof flags['password-file'] === 'string' ? flags['password-file'] : undefined;
   const outputDirFlag = typeof flags.output === 'string' ? flags.output : undefined;
   const resolvedOutputDir = outputDirFlag ? path.resolve(process.cwd(), outputDirFlag) : undefined;
+  const showQR = flags.qr === true || flags['show-qr'] === true;
   const [automationPassword, setAutomationPassword] = useState<string | undefined>(directPassword);
   const [automationError, setAutomationError] = useState<string | null>(null);
   const [automationLoading, setAutomationLoading] = useState<boolean>(Boolean(passwordFilePath && !directPassword));
@@ -495,6 +496,7 @@ export function KeysetCreate({flags}: KeysetCreateProps) {
           }}
           autoPassword={automationPassword}
           outputDir={resolvedOutputDir}
+          showQR={showQR}
         />
       </Box>
     </Box>
