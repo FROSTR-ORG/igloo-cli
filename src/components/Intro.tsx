@@ -1,6 +1,18 @@
 import React from 'react';
 import {Box, Text} from 'ink';
 
+const FROSTR_ICON = `
+     \\  |  /
+      \\ | /
+   ----(o)----
+      / | \\
+     /  |  \\
+        |
+        |
+        |--
+        |--
+`;
+
 type IntroProps = {
   version: string;
   commandExamples: string[];
@@ -10,6 +22,10 @@ export function Intro({version, commandExamples}: IntroProps) {
   return (
     <Box flexDirection="column" paddingX={1}>
       <Box marginTop={1} flexDirection="column" alignItems="center">
+        <Text color="cyan">{FROSTR_ICON}</Text>
+      </Box>
+
+      <Box flexDirection="column" alignItems="center">
         <Text color="cyanBright">IGLOO CLI</Text>
         <Text color="white">FROSTR remote signing toolkit</Text>
         <Text color="gray">version {version}</Text>
