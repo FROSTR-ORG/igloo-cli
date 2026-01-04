@@ -1,5 +1,89 @@
-import React from 'react';
+import {useState, useEffect} from 'react';
 import {Box, Text} from 'ink';
+
+// Animation frames for twirling key (z-axis rotation)
+const ICON_FRAMES = [
+  // Frame 0: front view (0°)
+  `  \\  |  /
+   \\ | /
+----(o)----
+   / | \\
+  /  |  \\
+     |
+     |
+     |--
+     |--`,
+  // Frame 1: compressing (~45°)
+  `   \\ | /
+    \\|/
+ ---(o)---
+    /|\\
+   / | \\
+     |
+     |
+     |-
+     |-`,
+  // Frame 2: edge view (90°)
+  `     |
+     |
+    (o)
+     |
+     |
+     |
+     |
+     |
+     |`,
+  // Frame 3: expanding (~135°)
+  `   / | \\
+    /|\\
+ ---(o)---
+    \\|/
+   \\ | /
+     |
+     |
+    -|
+    -|`,
+  // Frame 4: back view (180°)
+  `  /  |  \\
+   / | \\
+----(o)----
+   \\ | /
+  \\  |  /
+     |
+     |
+   --|
+   --|`,
+  // Frame 5: compressing (~225°)
+  `   / | \\
+    /|\\
+ ---(o)---
+    \\|/
+   \\ | /
+     |
+     |
+    -|
+    -|`,
+  // Frame 6: edge view (270°)
+  `     |
+     |
+    (o)
+     |
+     |
+     |
+     |
+     |
+     |`,
+  // Frame 7: expanding (~315°)
+  `   \\ | /
+    \\|/
+ ---(o)---
+    /|\\
+   / | \\
+     |
+     |
+     |-
+     |-`,
+];
 
 type IntroProps = {
   version: string;
@@ -7,9 +91,20 @@ type IntroProps = {
 };
 
 export function Intro({version, commandExamples}: IntroProps) {
+  const [frameIndex, setFrameIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setFrameIndex(prev => (prev + 1) % ICON_FRAMES.length);
+    }, 200);
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <Box flexDirection="column" paddingX={1}>
       <Box marginTop={1} flexDirection="column" alignItems="center">
+        <Text color="cyan">{ICON_FRAMES[frameIndex]}</Text>
         <Text color="cyanBright">IGLOO CLI</Text>
         <Text color="white">FROSTR remote signing toolkit</Text>
         <Text color="gray">version {version}</Text>
