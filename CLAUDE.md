@@ -62,6 +62,8 @@ Bun alternative scripts: `npm run dev:bun`, `npm run build:bun`, `npm run test:b
 
 **Keys namespace** (`igloo keys <subcommand>`):
 - `convert --from <type> --value <key>` — Convert between npub/nsec/hex formats
+- `npub <value>` / `nsec <value>` — Direct conversion from bech32 format
+- `hex-public <value>` / `hex-private <value>` — Direct conversion from hex format
 
 ## Architecture
 
@@ -72,7 +74,7 @@ Bun alternative scripts: `npm run dev:bun`, `npm run build:bun`, `npm run test:b
 
 ### Component Organization
 
-```
+```text
 src/components/
 ├── Intro.tsx, Setup.tsx, About.tsx, Help.tsx  # Top-level screens
 ├── ui/Prompt.tsx                               # Reusable prompt component
@@ -80,13 +82,19 @@ src/components/
 │   ├── ShareSigner.tsx                         # Long-lived signer with Bifrost node
 │   ├── ShareStatus.tsx                         # Peer diagnostics
 │   ├── ShareLoad.tsx, ShareList.tsx, ShareAdd.tsx
-│   └── SharePolicy.tsx                         # Policy configuration
+│   ├── SharePolicy.tsx                         # Policy configuration
+│   ├── ShareHelp.tsx                           # Share namespace help
+│   └── ShareNamespaceFrame.tsx                 # Namespace UI wrapper
 ├── keyset/                                     # Keyset creation and management
 │   ├── KeysetCreate.tsx                        # Interactive keyset generation
+│   ├── KeysetLoad.tsx, KeysetList.tsx          # Load/list keysets
+│   ├── KeysetSigner.tsx, KeysetStatus.tsx      # Signer and status views
+│   ├── KeysetHelp.tsx                          # Keyset namespace help
 │   ├── ShareSaver.tsx                          # Encrypts and persists shares
 │   └── useShareEchoListener.ts                 # Echo event hook
 ├── keys/                                       # Key conversion utilities
-│   └── KeyConvert.tsx
+│   ├── KeyConvert.tsx                          # Key format conversion
+│   └── KeyHelp.tsx                             # Keys namespace help
 └── relays/                                     # Relay configuration
     └── Relays.tsx
 ```
@@ -99,8 +107,12 @@ Non-UI utilities for share management:
 - `paths.ts` — Platform-specific storage paths (e.g., `~/Library/Application Support/igloo-cli/shares`)
 - `policy.ts` — Per-share policy management
 - `relays.ts` — Default relay configuration
+- `echoRelays.ts` — Echo-specific relay configuration
 - `echo.ts` — Echo event utilities for share transfer
+- `awaitShareEchoCompat.ts` — Compatibility layer for echo events
+- `naming.ts` — Share naming utilities
 - `types.ts` — TypeScript types for shares, keysets, policies
+- `index.ts` — Barrel export
 
 ### Polyfills (`src/polyfills/`)
 
@@ -119,7 +131,7 @@ Non-UI utilities for share management:
 - **Ink Components**: Use `<Box>`, `<Text>` from `ink` (not HTML elements)
 - **File Extensions**: All imports use `.js` extensions (TypeScript ESM requirement)
 - **Flag Parsing**: Manual in `cli.tsx`, supports `--flag value`, `--flag=value`, `-f value`
-- **Flag Aliases**: `-t` → `--threshold`, `-T` → `--total`, `-E` → `--debug-echo`
+- **Flag Aliases**: `-t` → `--threshold`, `-T` → `--total`, `-E` → `--debug-echo`, `-h` → `--help`, `-v` → `--version`
 - **Numeric Flags**: Validated via `parseNumber()` in App.tsx
 
 ## Adding a New Command
@@ -132,6 +144,6 @@ Non-UI utilities for share management:
 
 ## Environment Variables
 
-- `IGLOO_DEBUG_ECHO=1` — Enable verbose echo diagnostics
+- `IGLOO_DEBUG_ECHO=1` — Enable verbose echo diagnostics (or use `--debug-echo` flag)
 - `IGLOO_TEST_RELAY=wss://...` — Pin a specific relay for testing
 - `IGLOO_DISABLE_RAW_MODE=1` — Disable Ink raw mode (for CI/tests)
