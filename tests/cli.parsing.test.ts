@@ -53,6 +53,17 @@ test('parseArgv --flag=value inline format', () => {
   assert.equal(result.flags.share, 'abc123');
 });
 
+test('parseArgv --flag= with empty value yields empty string', () => {
+  const result = parseArgv(['--name=']);
+  assert.equal(result.flags.name, '');
+});
+
+test('parseArgv --flag= does not consume next arg', () => {
+  const result = parseArgv(['--name=', 'command']);
+  assert.equal(result.flags.name, '');
+  assert.equal(result.command, 'command');
+});
+
 test('parseArgv -f value short flag', () => {
   const result = parseArgv(['-s', 'abc123']);
   assert.equal(result.flags.s, 'abc123');

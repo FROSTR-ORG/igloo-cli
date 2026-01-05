@@ -31,13 +31,14 @@ export function parseArgv(argv: string[]): ParsedArgs {
       const flagValue = value.slice(2);
       const equalsIndex = flagValue.indexOf('=');
       const name = equalsIndex === -1 ? flagValue : flagValue.substring(0, equalsIndex);
-      const inline = equalsIndex === -1 ? undefined : flagValue.substring(equalsIndex + 1);
 
-      if (inline !== undefined && inline.length > 0) {
-        flags[name] = inline;
+      // If = is present, use the RHS (even if empty string)
+      if (equalsIndex !== -1) {
+        flags[name] = flagValue.substring(equalsIndex + 1);
         continue;
       }
 
+      // No =, so peek at next arg for value or treat as boolean
       const next = argv[index + 1];
       if (next !== undefined && !next.startsWith('-')) {
         flags[name] = next;

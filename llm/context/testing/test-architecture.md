@@ -252,7 +252,7 @@ The upstream `@frostr/igloo-core` library has comprehensive tests covering:
 - CLI-specific argument parsing
 - Local share encryption/storage (not covered upstream)
 - File I/O and persistence
-- Integration with the CLI interface
+- Integration with the CLI
 
 ---
 
