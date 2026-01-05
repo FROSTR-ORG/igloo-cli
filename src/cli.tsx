@@ -5,6 +5,8 @@ import {render} from 'ink';
 import {PassThrough} from 'node:stream';
 import App from './App.js';
 import {Help} from './components/Help.js';
+import {parseArgv, toBool} from './lib/parseArgv.js';
+import type {ParsedArgs, Flags} from './lib/parseArgv.js';
 import packageJson from '../package.json' with {type: 'json'};
 
 // Swallow benign Nostr pool shutdown rejections from nostr-tools
@@ -42,103 +44,7 @@ if (typeof process !== 'undefined' && typeof process.on === 'function') {
   } catch {}
 }
 
-type Flags = Record<string, string | boolean>;
-
-type ParsedArgs = {
-  command: string;
-  args: string[];
-  flags: Flags;
-  showHelp: boolean;
-  showVersion: boolean;
-};
-
-function parseArgv(argv: string[]): ParsedArgs {
-  const flags: Flags = {};
-  const positionals: string[] = [];
-  let showHelp = false;
-  let showVersion = false;
-
-  for (let index = 0; index < argv.length; index += 1) {
-    const value = argv[index];
-
-    if (value === '--help' || value === '-h') {
-      showHelp = true;
-      continue;
-    }
-
-    if (value === '--version' || value === '-v') {
-      showVersion = true;
-      continue;
-    }
-
-    if (value.startsWith('--')) {
-      const [name, inline] = value.slice(2).split('=');
-
-      if (inline !== undefined && inline.length > 0) {
-        flags[name] = inline;
-        continue;
-      }
-
-      const next = argv[index + 1];
-      if (next !== undefined && !next.startsWith('-')) {
-        flags[name] = next;
-        index += 1;
-      } else {
-        flags[name] = true;
-      }
-
-      continue;
-    }
-
-    if (value.startsWith('-') && value.length > 1) {
-      const name = value.slice(1);
-      const next = argv[index + 1];
-      if (next !== undefined && !next.startsWith('-')) {
-        flags[name] = next;
-        index += 1;
-      } else {
-        flags[name] = true;
-      }
-      continue;
-    }
-
-    positionals.push(value);
-  }
-
-  if (flags.t !== undefined && flags.threshold === undefined) {
-    flags.threshold = flags.t;
-    delete flags.t;
-  }
-
-  if (flags.T !== undefined && flags.total === undefined) {
-    flags.total = flags.T;
-    delete flags.T;
-  }
-
-  // Short alias: -E → --debug-echo
-  if (flags.E !== undefined && flags['debug-echo'] === undefined) {
-    flags['debug-echo'] = flags.E;
-    delete flags.E;
-  }
-
-  return {
-    command: positionals[0] ?? 'intro',
-    args: positionals.slice(1),
-    flags,
-    showHelp,
-    showVersion
-  };
-}
-
-function toBool(value: string | boolean | undefined): boolean {
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'string') {
-    const v = value.trim().toLowerCase();
-    if (['1', 'true', 'yes', 'on'].includes(v)) return true;
-    if (['0', 'false', 'no', 'off'].includes(v)) return false;
-  }
-  return false;
-}
+// parseArgv, toBool, ParsedArgs, and Flags are now imported from ./lib/parseArgv.js
 
 function showHelpScreen(version: string, opts?: any) {
   const instance = render(<Help version={version} />, opts);

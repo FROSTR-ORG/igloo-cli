@@ -12,29 +12,27 @@ This CLI is built with React (via Ink), TypeScript, and uses the ESM module syst
 
 ```bash
 # Install dependencies
-npm install
+bun install
 
 # Run CLI in development (no build required)
-npm run dev [command] [flags]
+bun run dev [command] [flags]
 
 # Build for distribution
-npm run build
+bun run build
 
 # Run built CLI
-npm start   # or: node dist/cli.js
+bun start   # or: node dist/cli.js
 
 # Type checking
-npm run typecheck
+bun run typecheck
 
 # Test (runs typecheck + tsx --test)
-npm test
+bun test
 
 # Link binary locally for testing
-npm link
+bun link
 igloo --help
 ```
-
-Bun alternative scripts: `npm run dev:bun`, `npm run build:bun`, `npm run test:bun`
 
 ## Command Structure
 
@@ -139,8 +137,8 @@ Non-UI utilities for share management:
 1. Create component in appropriate `src/components/` subdirectory
 2. Import in `src/App.tsx`
 3. Add case to router function (`App()` switch or namespace-specific renderer like `renderShare()`)
-4. Run `npm run typecheck` to verify
-5. Test with `npm run dev <new-command>`
+4. Run `bun run typecheck` to verify
+5. Test with `bun run dev <new-command>`
 
 ## Environment Variables
 
