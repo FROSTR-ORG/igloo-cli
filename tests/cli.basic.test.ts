@@ -19,9 +19,12 @@ afterEach(async () => {
 });
 
 test('default intro screen renders', async () => {
-  const {stdout, exitCode, timedOut} = await runCli([]);
-  assert.equal(exitCode, 0);
-  assert.equal(timedOut, false);
+  // Intro has an animated icon that runs forever, so we use successPattern
+  // to detect when content renders and terminate gracefully
+  const {stdout, timedOut} = await runCli([], {
+    successPattern: /Core commands/
+  });
+  assert.equal(timedOut, false, 'Process should not time out');
   assert.match(stdout, /IGLOO CLI/);
   assert.match(stdout, /Core commands/);
 });

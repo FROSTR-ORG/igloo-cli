@@ -1,5 +1,5 @@
 import React, {useEffect, useMemo, useState} from 'react';
-import {Box, Text} from 'ink';
+import {Box, Text, useInput} from 'ink';
 import {decodeShare} from '@frostr/igloo-core';
 import {
   deriveSecret,
@@ -15,6 +15,7 @@ import {
   createDefaultPolicy
 } from '../../keyset/index.js';
 import {Prompt} from '../ui/Prompt.js';
+import {CredentialDisplay} from '../ui/CredentialDisplay.js';
 import {useShareEchoListener} from './useShareEchoListener.js';
 
 type ShareSaverProps = {
@@ -27,6 +28,7 @@ type ShareSaverProps = {
   }) => void;
   autoPassword?: string;
   outputDir?: string;
+  showQR?: boolean;
 };
 
 type ShareState = {
@@ -42,7 +44,8 @@ export function ShareSaver({
   shareCredentials,
   onComplete,
   autoPassword,
-  outputDir
+  outputDir,
+  showQR = false
 }: ShareSaverProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [phase, setPhase] = useState<StepPhase>('password');
@@ -53,6 +56,7 @@ export function ShareSaver({
   const [notified, setNotified] = useState(false);
   const [autoState, setAutoState] = useState<'idle' | 'running' | 'done' | 'error'>('idle');
   const [autoError, setAutoError] = useState<string | null>(null);
+  const [qrVisible, setQrVisible] = useState(showQR);
 
   const shares = useMemo<ShareState[]>(() => {
     return shareCredentials.map((credential, idx) => {
@@ -85,25 +89,47 @@ export function ShareSaver({
     share?.credential
   );
 
+  useInput((input) => {
+    if (input === 'q' || input === 'Q') {
+      setQrVisible(v => !v);
+    }
+  }, {isActive: shouldPrompt});
+
+  const qrHint = (
+    <Text color="gray">Press Q to {qrVisible ? 'hide' : 'show'} QR codes</Text>
+  );
+
   const shareCredentialBlock = (
-    <Box marginTop={1} flexDirection="column">
-      <Text color="cyanBright">Share credential</Text>
-      <Text color="white">{share?.credential ?? 'unknown'}</Text>
-    </Box>
+    <CredentialDisplay
+      label="Share credential"
+      credential={share?.credential ?? 'unknown'}
+      labelColor="cyanBright"
+      textColor="white"
+      showQR={qrVisible}
+    />
   );
 
   const groupCredentialBlock = (
-    <Box marginTop={1} flexDirection="column">
-      <Text color="magentaBright">Group credential</Text>
-      <Text color="white">{groupCredential}</Text>
-    </Box>
+    <CredentialDisplay
+      label="Group credential"
+      credential={groupCredential}
+      labelColor="magentaBright"
+      textColor="white"
+      showQR={qrVisible}
+    />
   );
 
   const summaryView = (
     <Box flexDirection="column">
       <Text color="cyan">All shares processed.</Text>
-      <Text color="cyan">Group credential:</Text>
-      <Text color="gray">{groupCredential}</Text>
+      <CredentialDisplay
+        label="Group credential"
+        credential={groupCredential}
+        labelColor="cyan"
+        textColor="gray"
+        showQR={qrVisible}
+      />
+      {shouldPrompt ? qrHint : null}
       {savedPaths.length > 0 ? (
         <Box flexDirection="column" marginTop={1}>
           <Text color="cyan">Saved files</Text>
@@ -368,6 +394,7 @@ export function ShareSaver({
         <Text color="cyan">Encrypting share {share.index}…</Text>
         {shareCredentialBlock}
         {groupCredentialBlock}
+        {shouldPrompt ? qrHint : null}
         {renderEchoStatus()}
       </Box>
     );
@@ -380,6 +407,7 @@ export function ShareSaver({
         {feedback ? <Text color="gray">{feedback}</Text> : null}
         {shareCredentialBlock}
         {groupCredentialBlock}
+        {shouldPrompt ? qrHint : null}
         {renderEchoStatus()}
         <Prompt
           key={`continue-${share.index}`}
@@ -399,6 +427,7 @@ export function ShareSaver({
       <Text color="cyan">Share {share.index} of {shareCredentials.length}</Text>
       {shareCredentialBlock}
       {groupCredentialBlock}
+      {shouldPrompt ? qrHint : null}
       {renderEchoStatus()}
       <Text>
         Set a password to encrypt this share. Leave blank to skip saving and handle it manually.

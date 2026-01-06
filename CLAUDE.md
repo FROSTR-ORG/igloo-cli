@@ -12,120 +12,136 @@ This CLI is built with React (via Ink), TypeScript, and uses the ESM module syst
 
 ```bash
 # Install dependencies
-npm install
+bun install
 
 # Run CLI in development (no build required)
-npm run dev [command] [flags]
+bun run dev [command] [flags]
 
 # Build for distribution
-npm run build
+bun run build
 
 # Run built CLI
-npm start
-# or
-node dist/cli.js
+bun start   # or: node dist/cli.js
 
 # Type checking
-npm run typecheck
-# or
-tsc --noEmit
+bun run typecheck
 
-# Test (currently just runs typecheck)
-npm test
+# Test (runs typecheck + tsx --test)
+bun test
 
 # Link binary locally for testing
-npm link
-igloo-cli --help
+bun link
+igloo --help
 ```
 
-## Available Commands
+## Command Structure
 
-- `igloo-cli` — Default intro screen with FROSTR-themed welcome
-- `igloo-cli setup --threshold 2 --total 3` — Bootstrap checklist for k-of-n setup
-- `igloo-cli about` — Product overview and architecture summary
-- `igloo-cli status` — Placeholder for health probes (not yet implemented)
-- `igloo-cli --help` — Help screen
-- `igloo-cli --version` — Version info
+**Binary names**: `igloo` and `igloo-cli` (both work after linking)
 
-Flag aliases: `-t` for `--threshold`, `-T` for `--total`
+**Top-level commands**:
+- `igloo` — Animated welcome screen
+- `igloo setup --threshold 2 --total 3` — Bootstrap checklist for k-of-n setup
+- `igloo about` — FROSTR architecture overview
+- `igloo status --share <id>` — Peer diagnostics (shortcut for `share status`)
+- `igloo signer --share <id>` — Run a signer (shortcut for `share signer`)
+- `igloo policy --share <id>` — Policy management (shortcut for `share policy`)
+- `igloo relays` — Show/set default relays
+
+**Share namespace** (`igloo share <subcommand>`):
+- `add --group <bfgroup> --share <bfshare>` — Import share
+- `list` — List saved shares
+- `load --share <id>` — Decrypt and display share
+- `status --share <id>` — Peer diagnostics via Bifrost
+- `signer --share <id>` — Long-lived signer process
+- `policy --share <id>` — Configure send/receive rules
+
+**Keyset namespace** (`igloo keyset <subcommand>`):
+- `create` — Generate and persist encrypted shares
+
+**Keys namespace** (`igloo keys <subcommand>`):
+- `convert --from <type> --value <key>` — Convert between npub/nsec/hex formats
+- `npub <value>` / `nsec <value>` — Direct conversion from bech32 format
+- `hex-public <value>` / `hex-private <value>` — Direct conversion from hex format
 
 ## Architecture
 
 ### Entry Point & Routing
 
-- [src/cli.tsx](src/cli.tsx) — Entry point, parses argv, renders Ink app
-  - Custom `parseArgv()` handles flags, positional args, `--help`, `--version`
-  - Renders `<App>` or `<Help>` components via Ink's `render()`
+- `src/cli.tsx` — Entry point with custom `parseArgv()` for flags and positional args, renders Ink app
+- `src/App.tsx` — Command router, maps commands to React components via switch statement
 
-- [src/App.tsx](src/App.tsx) — Command router
-  - Maps commands to React components
-  - Normalizes numeric flags (threshold/total) with validation
+### Component Organization
 
-### Components
+```text
+src/components/
+├── Intro.tsx, Setup.tsx, About.tsx, Help.tsx  # Top-level screens
+├── ui/Prompt.tsx                               # Reusable prompt component
+├── share/                                      # Share namespace commands
+│   ├── ShareSigner.tsx                         # Long-lived signer with Bifrost node
+│   ├── ShareStatus.tsx                         # Peer diagnostics
+│   ├── ShareLoad.tsx, ShareList.tsx, ShareAdd.tsx
+│   ├── SharePolicy.tsx                         # Policy configuration
+│   ├── ShareHelp.tsx                           # Share namespace help
+│   └── ShareNamespaceFrame.tsx                 # Namespace UI wrapper
+├── keyset/                                     # Keyset creation and management
+│   ├── KeysetCreate.tsx                        # Interactive keyset generation
+│   ├── KeysetLoad.tsx, KeysetList.tsx          # Load/list keysets
+│   ├── KeysetSigner.tsx, KeysetStatus.tsx      # Signer and status views
+│   ├── KeysetHelp.tsx                          # Keyset namespace help
+│   ├── ShareSaver.tsx                          # Encrypts and persists shares
+│   └── useShareEchoListener.ts                 # Echo event hook
+├── keys/                                       # Key conversion utilities
+│   ├── KeyConvert.tsx                          # Key format conversion
+│   └── KeyHelp.tsx                             # Keys namespace help
+└── relays/                                     # Relay configuration
+    └── Relays.tsx
+```
 
-All components live in [src/components/](src/components/) and use Ink's React-like API for terminal UI:
+### Core Library (`src/keyset/`)
 
-- `Intro.tsx` — Default welcome screen
-- `Setup.tsx` — Step-by-step bootstrap checklist for share distribution
-- `About.tsx` — FROSTR ecosystem overview
-- `Help.tsx` — Terminal help/usage screen
+Non-UI utilities for share management:
+- `storage.ts` — Read/write share files to disk
+- `crypto.ts` — Share encryption/decryption
+- `paths.ts` — Platform-specific storage paths (e.g., `~/Library/Application Support/igloo-cli/shares`)
+- `policy.ts` — Per-share policy management
+- `relays.ts` — Default relay configuration
+- `echoRelays.ts` — Echo-specific relay configuration
+- `echo.ts` — Echo event utilities for share transfer
+- `awaitShareEchoCompat.ts` — Compatibility layer for echo events
+- `naming.ts` — Share naming utilities
+- `types.ts` — TypeScript types for shares, keysets, policies
+- `index.ts` — Barrel export
 
-### Build Configuration
+### Polyfills (`src/polyfills/`)
 
-- [tsconfig.json](tsconfig.json) — TypeScript config targeting ES2020, NodeNext modules, strict mode
-- [tsup.config.ts](tsup.config.ts) — Build tool config
-  - Entry: `src/cli.tsx`
-  - Output: `dist/cli.js` with shebang (`#!/usr/bin/env node`)
-  - Format: ESM only
-  - Target: Node 18+
+- `websocket.ts` — WebSocket global for Node (required by nostr-tools)
+- `nostr.ts` — Normalizes Nostr subscribe filters for relay compatibility
 
-### FROSTR Ecosystem Context
+### Key Dependencies
 
-FROSTR splits a nostr secret key (nsec) into multiple shares using Shamir Secret Sharing. A threshold (k) of total shares (n) is required to sign messages. This CLI helps users bootstrap and manage their signing setups.
-
-**Related Projects**:
-- **@frostr/bifrost** — Reference client implementation (node coordination, signing)
-- **@frostr/igloo-core** — TypeScript library for keyset management, node creation, peer management
-- **Igloo Desktop** — Desktop key management app
-- **Frost2x** — Browser extension (NIP-07 signer)
-- **Igloo Server** — Server-based signer with ephemeral relay
-
-The CLI provides guidance for setting up these components together. Users typically:
-1. Generate an nsec in Igloo Desktop
-2. Split into k-of-n shares
-3. Distribute shares across signers (Desktop, Frost2x, cold storage)
-4. Configure shared relay URLs
-5. Use the setup to sign nostr events transparently
+- `@frostr/bifrost` — Reference client for node coordination and signing
+- `@frostr/igloo-core` — Keyset generation, peer management
+- `ink` — React-based terminal UI
+- `nostr-tools` — Nostr protocol primitives
 
 ## Key Patterns
 
-- **Ink Components**: Use `<Box>`, `<Text>`, etc. from `ink` for terminal UI (not HTML)
-- **Argument Parsing**: Handled manually in cli.tsx, supports `--flag value`, `--flag=value`, `-f value`
-- **Command Routing**: Switch statement in App.tsx based on normalized command string
-- **File Extensions**: All imports must use `.js` extensions (TypeScript ESM requirement) even though source files are `.tsx`
+- **Ink Components**: Use `<Box>`, `<Text>` from `ink` (not HTML elements)
+- **File Extensions**: All imports use `.js` extensions (TypeScript ESM requirement)
+- **Flag Parsing**: Manual in `cli.tsx`, supports `--flag value`, `--flag=value`, `-f value`
+- **Flag Aliases**: `-t` → `--threshold`, `-T` → `--total`, `-E` → `--debug-echo`, `-h` → `--help`, `-v` → `--version`
+- **Numeric Flags**: Validated via `parseNumber()` in App.tsx
 
-## Common Tasks
+## Adding a New Command
 
-### Adding a New Command
+1. Create component in appropriate `src/components/` subdirectory
+2. Import in `src/App.tsx`
+3. Add case to router function (`App()` switch or namespace-specific renderer like `renderShare()`)
+4. Run `bun run typecheck` to verify
+5. Test with `bun run dev <new-command>`
 
-1. Create component in [src/components/](src/components/)
-2. Import in [src/App.tsx](src/App.tsx)
-3. Add case to switch statement in `App()` function
-4. Update command examples in `Intro.tsx` if applicable
-5. Run `npm run typecheck` to verify
-6. Test with `npm run dev <new-command>`
+## Environment Variables
 
-### Adding Command Flags
-
-1. Parse in [src/cli.tsx](src/cli.tsx) `parseArgv()` if custom logic needed
-2. Extract in [src/App.tsx](src/App.tsx) from `flags` prop
-3. Pass as props to component
-4. Add validation/defaults as needed (see `parseNumber()` example)
-
-### Building for Distribution
-
-```bash
-npm run build
-# Output: dist/cli.js with shebang, ESM format
-# Test: node dist/cli.js [command]
-```
+- `IGLOO_DEBUG_ECHO=1` — Enable verbose echo diagnostics (or use `--debug-echo` flag)
+- `IGLOO_TEST_RELAY=wss://...` — Pin a specific relay for testing
+- `IGLOO_DISABLE_RAW_MODE=1` — Disable Ink raw mode (for CI/tests)
